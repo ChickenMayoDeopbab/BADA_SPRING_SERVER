@@ -46,8 +46,6 @@ public class AuthService {
             HttpServletResponse response) {
         String accessToken = jwtProvider.createAccessToken(username, role);
 
-        redisTemplate.opsForValue().set("accessToken: " + username, accessToken);
-
         Cookie cookie = new Cookie("accessToken", accessToken);
         cookie.setPath("/");
         cookie.setHttpOnly(true);
