@@ -10,6 +10,7 @@ import ChickenMayoDeopbab.bada.domain.user.exception.UsersStatusCode;
 import ChickenMayoDeopbab.bada.domain.user.repository.UsersRepository;
 import ChickenMayoDeopbab.bada.global.exception.ApplicationException;
 import ChickenMayoDeopbab.bada.global.jwt.JwtProvider;
+import ChickenMayoDeopbab.bada.global.jwt.MemberDetails;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +43,7 @@ public class AuthService {
         return new LoginResponse(accessToken, refreshToken);
     }
 
+    // RefreshToken와 username을 받고 새로운 AccessToken와 RefreshToken을 반환
     public LoginResponse refresh(
             RefreshRequest request,
             HttpServletResponse response) {
@@ -60,6 +62,20 @@ public class AuthService {
     }
 
     /**
+     * 로그아웃(세션 종료) 처리
+     * - Redis에 저장된 RefreshToken 삭제
+     * - AccessToken, RefreshToken 쿠키 제거
+     */
+    public void signOut(
+            MemberDetails memberDetails,
+            HttpServletResponse response) {
+        redisTemplate.delete("refreshToken: " + memberDetails.getUsername());
+
+        addCookie(response, "accessToken", "", 0, true);
+        addCookie(response, "refreshToken", "", 0, false);
+    }
+
+    /**
      * Access Token을 생성하고 HttpOnly 쿠키로 저장한다.
      * - 클라이언트에서는 JS로 접근 불가능
      * - 인증 요청 시 자동 포함됨
@@ -70,11 +86,7 @@ public class AuthService {
             HttpServletResponse response) {
         String accessToken = jwtProvider.createAccessToken(username, role);
 
-        Cookie cookie = new Cookie("accessToken", accessToken);
-        cookie.setPath("/");
-        cookie.setHttpOnly(true);
-        cookie.setMaxAge(3600);
-        response.addCookie(cookie);
+        addCookie(response, "accessToken", accessToken, 3600, true);
 
         return accessToken;
     }
@@ -91,13 +103,22 @@ public class AuthService {
 
         redisTemplate.opsForValue().set("refreshToken: " + username, refreshToken, Duration.ofDays(7));
 
-        Cookie cookie = new Cookie("refreshToken", refreshToken);
-        cookie.setPath("/");
-        cookie.setHttpOnly(false);
-        cookie.setMaxAge(3600);
-        response.addCookie(cookie);
+        addCookie(response, "refreshToken", refreshToken, 3600, false);
 
         return refreshToken;
+    }
+
+    private void addCookie(
+            HttpServletResponse response,
+            String name,
+            String value,
+            int maxAge,
+            boolean httpOnly) {
+        Cookie cookie = new Cookie(name, value);
+        cookie.setPath("/");
+        cookie.setHttpOnly(httpOnly);
+        cookie.setMaxAge(maxAge);
+        response.addCookie(cookie);
     }
 
     private Users getUser(String username) {

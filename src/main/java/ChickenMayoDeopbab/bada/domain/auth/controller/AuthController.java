@@ -7,9 +7,12 @@ import ChickenMayoDeopbab.bada.domain.auth.service.AuthService;
 import ChickenMayoDeopbab.bada.domain.user.dto.request.SignUpRequest;
 import ChickenMayoDeopbab.bada.domain.user.service.UserService;
 import ChickenMayoDeopbab.bada.global.common.ApiResponse;
+import ChickenMayoDeopbab.bada.global.jwt.MemberDetails;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,10 +27,10 @@ public class AuthController {
 
     // 자체 회원가입
     @PostMapping("/signup")
-    public ApiResponse<Boolean> signup(
+    public ApiResponse<Void> signup(
             @Valid @RequestBody SignUpRequest request) {
         userService.signUp(request);
-        return ApiResponse.ok(true, "회원가입에 성공했습니다.");
+        return ApiResponse.ok(null, "회원가입에 성공했습니다.");
     }
 
     //자체 로그인
@@ -40,6 +43,7 @@ public class AuthController {
         return ApiResponse.ok(res, "로그인에 성공했습니다.");
     }
 
+    // 리프래시
     @PostMapping("/refresh")
     public ApiResponse<LoginResponse> refresh(
             @Valid @RequestBody RefreshRequest request,
@@ -47,5 +51,14 @@ public class AuthController {
         LoginResponse res = authService.refresh(request, response);
 
         return ApiResponse.ok(res, "재발급되었습니다.");
+    }
+
+    //로그아웃
+    @DeleteMapping("/signout")
+    public ApiResponse<Void> logout(
+            @AuthenticationPrincipal MemberDetails memberDetails,
+            HttpServletResponse response) {
+        authService.signOut(memberDetails, response);
+        return ApiResponse.ok(null, "로그아웃 되었습니다.");
     }
 }
