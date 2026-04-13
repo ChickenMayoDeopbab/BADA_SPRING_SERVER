@@ -48,7 +48,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        if ("REFRESH".equals(jwtProvider.getSubjectFromToken(token))) {
+        if (jwtProvider.getTypeFromToken(token).filter("ACCESS"::equals).isEmpty()) {
             response.setStatus(HttpStatus.UNAUTHORIZED.value());
             response.setContentType("application/json;charset=UTF-8");
             ApiResponse<Void> body = ApiResponse.error(
@@ -59,8 +59,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        String username = jwtProvider.getUsernameFromToken(token);
-        UserDetails userDetails = memberDetailsService.loadUserByUsername(username);
+        Long userId = jwtProvider.getUserIdFromToken(token);
+        UserDetails userDetails = memberDetailsService.loadUserById(userId);
         UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(
                 userDetails, null, userDetails.getAuthorities()
         );

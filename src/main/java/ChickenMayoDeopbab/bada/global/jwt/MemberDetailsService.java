@@ -21,4 +21,11 @@ public class MemberDetailsService implements UserDetailsService {
 
         return new MemberDetails(user);
     }
+
+    public UserDetails loadUserById(Long id) throws UsernameNotFoundException {
+        Users user = usersRepository.findById(id)
+                .orElseThrow(() -> new UsernameNotFoundException(id.toString()));
+
+        return new MemberDetails(user);
+    }
 }
