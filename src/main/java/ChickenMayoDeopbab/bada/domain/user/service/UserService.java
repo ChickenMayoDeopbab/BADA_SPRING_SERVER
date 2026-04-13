@@ -17,11 +17,13 @@ public class UserService {
     private final UsersRepository usersRepository;
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
 
+    //회원가입
     public void signUp(SignUpRequest request) {
         isValidUser(request.username(), request.email());
         usersRepository.save(request.toEntity(request.username(), bCryptPasswordEncoder.encode(request.password()), request.email()));
     }
 
+    //  아이디 검증 및 이메일인 중복 검사
     private void isValidUser(String username, String email) {
         if (usersRepository.existsByUsername(username)) {
             throw new ApplicationException(UsersStatusCode.DUPLICATE_USERNAME);
