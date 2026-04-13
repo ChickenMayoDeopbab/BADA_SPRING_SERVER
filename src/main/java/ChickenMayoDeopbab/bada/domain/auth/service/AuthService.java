@@ -1,13 +1,13 @@
 package ChickenMayoDeopbab.bada.domain.auth.service;
 
 import ChickenMayoDeopbab.bada.domain.auth.dto.request.LoginRequest;
+import ChickenMayoDeopbab.bada.domain.auth.dto.request.RefreshRequest;
 import ChickenMayoDeopbab.bada.domain.auth.dto.response.LoginResponse;
 import ChickenMayoDeopbab.bada.domain.auth.exception.AuthStatusCode;
 import ChickenMayoDeopbab.bada.domain.user.entity.Role;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
 import ChickenMayoDeopbab.bada.domain.user.exception.UsersStatusCode;
 import ChickenMayoDeopbab.bada.domain.user.repository.UsersRepository;
-import ChickenMayoDeopbab.bada.global.common.ApiResponse;
 import ChickenMayoDeopbab.bada.global.exception.ApplicationException;
 import ChickenMayoDeopbab.bada.global.jwt.JwtProvider;
 import jakarta.servlet.http.Cookie;
@@ -17,6 +17,8 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
+
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -25,11 +27,11 @@ public class AuthService {
     private final JwtProvider jwtProvider;
     private final BCryptPasswordEncoder passwordEncoder;
 
+    // access는 cookie로만 반환, refresh는 redis저장 후 cookie로 반환
     public LoginResponse login(
             LoginRequest request,
             HttpServletResponse response) {
-        Users user = usersRepository.findByUsername(request.username())
-                .orElseThrow(() -> new ApplicationException(UsersStatusCode.USER_NOT_FOUND));
+        Users user = getUser(request.username());
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new ApplicationException(AuthStatusCode.INVALID_PASSWORD);
         }
@@ -40,6 +42,28 @@ public class AuthService {
         return new LoginResponse(accessToken, refreshToken);
     }
 
+    public LoginResponse refresh(
+            RefreshRequest request,
+            HttpServletResponse response) {
+        String refreshToken = redisTemplate.opsForValue().get("refreshToken: " + request.username());
+
+        if (!refreshToken.equals(request.refreshToken()) || refreshToken == null) {
+            redisTemplate.delete("refreshToken: " + request.username());
+            throw new ApplicationException(AuthStatusCode.INVALID_REFRESH_TOKEN);
+        }
+        Users user = getUser(request.username());
+
+        String accessToken = generateAccessToken(user.getUsername(), user.getRole(), response);
+        String newRefreshToken = generateRefreshToken(user.getUsername(), response);
+
+        return new LoginResponse(accessToken, newRefreshToken);
+    }
+
+    /**
+     * Access Token을 생성하고 HttpOnly 쿠키로 저장한다.
+     * - 클라이언트에서는 JS로 접근 불가능
+     * - 인증 요청 시 자동 포함됨
+     */
     private String generateAccessToken(
             String username,
             Role role,
@@ -55,12 +79,17 @@ public class AuthService {
         return accessToken;
     }
 
+    /**
+     * Refresh Token을 생성하고 Redis에 저장한 뒤 쿠키로 반환한다.
+     * - Redis: 토큰 검증 및 재발급용
+     * - HttpOnly=false: (필요 시 JS 접근 가능)
+     */
     private String generateRefreshToken(
             String username,
             HttpServletResponse response) {
         String refreshToken = jwtProvider.createRefreshToken(username);
 
-        redisTemplate.opsForValue().set("refreshToken: " + username, refreshToken);
+        redisTemplate.opsForValue().set("refreshToken: " + username, refreshToken, Duration.ofDays(7));
 
         Cookie cookie = new Cookie("refreshToken", refreshToken);
         cookie.setPath("/");
@@ -69,5 +98,10 @@ public class AuthService {
         response.addCookie(cookie);
 
         return refreshToken;
+    }
+
+    private Users getUser(String username) {
+        return usersRepository.findByUsername(username)
+                .orElseThrow(() -> new ApplicationException(UsersStatusCode.USER_NOT_FOUND));
     }
 }

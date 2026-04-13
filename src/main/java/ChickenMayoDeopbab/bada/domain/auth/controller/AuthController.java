@@ -1,6 +1,7 @@
 package ChickenMayoDeopbab.bada.domain.auth.controller;
 
 import ChickenMayoDeopbab.bada.domain.auth.dto.request.LoginRequest;
+import ChickenMayoDeopbab.bada.domain.auth.dto.request.RefreshRequest;
 import ChickenMayoDeopbab.bada.domain.auth.dto.response.LoginResponse;
 import ChickenMayoDeopbab.bada.domain.auth.service.AuthService;
 import ChickenMayoDeopbab.bada.domain.user.dto.request.SignUpRequest;
@@ -21,16 +22,30 @@ public class AuthController {
     private final UserService userService;
     private final AuthService authService;
 
+    // 자체 회원가입
     @PostMapping("/signup")
-    public ApiResponse<Boolean> signup(@Valid @RequestBody SignUpRequest request) {
+    public ApiResponse<Boolean> signup(
+            @Valid @RequestBody SignUpRequest request) {
         userService.signUp(request);
         return ApiResponse.ok(true, "회원가입에 성공했습니다.");
     }
 
+    //자체 로그인
     @PostMapping("/login")
-    public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
+    public ApiResponse<LoginResponse> login(
+            @Valid @RequestBody LoginRequest request,
+            HttpServletResponse response) {
         LoginResponse res = authService.login(request, response);
 
         return ApiResponse.ok(res, "로그인에 성공했습니다.");
+    }
+
+    @PostMapping("/refresh")
+    public ApiResponse<LoginResponse> refresh(
+            @Valid @RequestBody RefreshRequest request,
+            HttpServletResponse response) {
+        LoginResponse res = authService.refresh(request, response);
+
+        return ApiResponse.ok(res, "재발급되었습니다.");
     }
 }
