@@ -2,7 +2,7 @@ package ChickenMayoDeopbab.bada.domain.auth.service;
 
 import ChickenMayoDeopbab.bada.domain.auth.dto.request.LoginRequest;
 import ChickenMayoDeopbab.bada.domain.auth.dto.request.RefreshRequest;
-import ChickenMayoDeopbab.bada.domain.auth.dto.response.LoginResponse;
+import ChickenMayoDeopbab.bada.domain.auth.dto.response.TokenResponse;
 import ChickenMayoDeopbab.bada.domain.auth.exception.AuthStatusCode;
 import ChickenMayoDeopbab.bada.domain.user.entity.Role;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
@@ -29,7 +29,7 @@ public class AuthService {
     private final BCryptPasswordEncoder passwordEncoder;
 
     // access는 cookie로만 반환, refresh는 redis저장 후 cookie로 반환
-    public LoginResponse login(
+    public TokenResponse login(
             LoginRequest request,
             HttpServletResponse response) {
         Users user = getUser(request.username());
@@ -40,11 +40,11 @@ public class AuthService {
         String accessToken = generateAccessToken(user.getUsername(), user.getRole(), response);
         String refreshToken = generateRefreshToken(user.getUsername(), response);
 
-        return new LoginResponse(accessToken, refreshToken);
+        return new TokenResponse(accessToken, refreshToken);
     }
 
     // RefreshToken와 username을 받고 새로운 AccessToken와 RefreshToken을 반환
-    public LoginResponse refresh(
+    public TokenResponse refresh(
             RefreshRequest request,
             HttpServletResponse response) {
         String refreshToken = redisTemplate.opsForValue().get("refreshToken: " + request.username());
@@ -58,7 +58,7 @@ public class AuthService {
         String accessToken = generateAccessToken(user.getUsername(), user.getRole(), response);
         String newRefreshToken = generateRefreshToken(user.getUsername(), response);
 
-        return new LoginResponse(accessToken, newRefreshToken);
+        return new TokenResponse(accessToken, newRefreshToken);
     }
 
     /**
@@ -121,7 +121,8 @@ public class AuthService {
         response.addCookie(cookie);
     }
 
-    private Users getUser(String username) {
+    private Users getUser(
+            String username) {
         return usersRepository.findByUsername(username)
                 .orElseThrow(() -> new ApplicationException(UsersStatusCode.USER_NOT_FOUND));
     }

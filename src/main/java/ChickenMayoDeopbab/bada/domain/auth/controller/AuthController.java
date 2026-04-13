@@ -2,7 +2,7 @@ package ChickenMayoDeopbab.bada.domain.auth.controller;
 
 import ChickenMayoDeopbab.bada.domain.auth.dto.request.LoginRequest;
 import ChickenMayoDeopbab.bada.domain.auth.dto.request.RefreshRequest;
-import ChickenMayoDeopbab.bada.domain.auth.dto.response.LoginResponse;
+import ChickenMayoDeopbab.bada.domain.auth.dto.response.TokenResponse;
 import ChickenMayoDeopbab.bada.domain.auth.service.AuthService;
 import ChickenMayoDeopbab.bada.domain.user.dto.request.SignUpRequest;
 import ChickenMayoDeopbab.bada.domain.user.service.UserService;
@@ -35,20 +35,20 @@ public class AuthController {
 
     //자체 로그인
     @PostMapping("/login")
-    public ApiResponse<LoginResponse> login(
+    public ApiResponse<TokenResponse> login(
             @Valid @RequestBody LoginRequest request,
             HttpServletResponse response) {
-        LoginResponse res = authService.login(request, response);
+        TokenResponse res = authService.login(request, response);
 
         return ApiResponse.ok(res, "로그인에 성공했습니다.");
     }
 
     // 리프래시
     @PostMapping("/refresh")
-    public ApiResponse<LoginResponse> refresh(
+    public ApiResponse<TokenResponse> refresh(
             @Valid @RequestBody RefreshRequest request,
             HttpServletResponse response) {
-        LoginResponse res = authService.refresh(request, response);
+        TokenResponse res = authService.refresh(request, response);
 
         return ApiResponse.ok(res, "재발급되었습니다.");
     }
