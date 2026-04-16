@@ -1,25 +1,21 @@
 package ChickenMayoDeopbab.bada.domain.user.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
+@Table(uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"provider", "providerId"})
+})
 @Builder
 public class Users {
     @Id
@@ -31,7 +27,7 @@ public class Users {
 
     private String password;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String email;
 
     private String profileImage;
@@ -48,6 +44,11 @@ public class Users {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
+    @Enumerated(EnumType.STRING)
+    private Provider provider;
+
+    private String providerId;
+
 
     @PrePersist
     public void prePersist() {
@@ -55,10 +56,19 @@ public class Users {
         this.totalTrainingCount = 0;
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
+        if (provider == null) {
+            this.provider = Provider.LOCAL;
+            this.providerId = UUID.randomUUID().toString();
+        }
     }
 
     @PreUpdate
     public void preUpdate() {
         this.updatedAt = LocalDateTime.now();
+    }
+
+    public Users update(String profileImage) {
+        this.profileImage = profileImage;
+        return this;
     }
 }
