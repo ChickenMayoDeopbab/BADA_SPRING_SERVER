@@ -66,4 +66,9 @@ public class Users {
     public void preUpdate() {
         this.updatedAt = LocalDateTime.now();
     }
+
+    public Users update(String profileImage) {
+        this.profileImage = profileImage;
+        return this;
+    }
 }

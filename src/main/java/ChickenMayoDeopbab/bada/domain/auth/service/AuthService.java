@@ -81,7 +81,7 @@ public class AuthService {
      * - 클라이언트에서는 JS로 접근 불가능
      * - 인증 요청 시 자동 포함됨
      */
-    private String generateAccessToken(
+    public String generateAccessToken(
             Long userId,
             Role role,
             HttpServletResponse response) {
@@ -97,7 +97,7 @@ public class AuthService {
      * - Redis: 토큰 검증 및 재발급용
      * - HttpOnly=false: (필요 시 JS 접근 가능)
      */
-    private String generateRefreshToken(
+    public String generateRefreshToken(
             Long userId,
             HttpServletResponse response) {
         String refreshToken = jwtProvider.createRefreshToken(userId);

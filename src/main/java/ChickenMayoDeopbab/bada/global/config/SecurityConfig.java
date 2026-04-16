@@ -1,5 +1,7 @@
 package ChickenMayoDeopbab.bada.global.config;
 
+import ChickenMayoDeopbab.bada.domain.auth.handler.OAuth2LoginSuccessHandler;
+import ChickenMayoDeopbab.bada.domain.auth.service.CustomOauth2UserService;
 import ChickenMayoDeopbab.bada.global.jwt.JwtAuthenticationFilter;
 import ChickenMayoDeopbab.bada.global.jwt.JwtProvider;
 import ChickenMayoDeopbab.bada.global.jwt.MemberDetailsService;
@@ -12,7 +14,6 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -27,15 +28,12 @@ public class SecurityConfig {
     private final JwtProvider jwtProvider;
     private final MemberDetailsService memberDetailsService;
     private final ObjectMapper objectMapper;
+    private final CustomOauth2UserService customOauth2UserService;
+    private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
 
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
         return new JwtAuthenticationFilter(objectMapper, jwtProvider, memberDetailsService);
-    }
-
-    @Bean
-    public BCryptPasswordEncoder bCryptPasswordEncoder() {
-        return new BCryptPasswordEncoder();
     }
 
     @Bean
@@ -50,8 +48,23 @@ public class SecurityConfig {
                                 "/api/v1/auth/signup",
                                 "/api/v1/auth/login"
                         ).permitAll()
+                        .requestMatchers(
+                                "/",
+                                "/css/**",
+                                "images/**",
+                                "/js/**",
+                                "/login/*",
+                                "/logout/*",
+                                "/posts/**",
+                                "/comments/**"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
+                .oauth2Login(oauth2 -> oauth2
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .userService(customOauth2UserService))
+                        .successHandler(oAuth2LoginSuccessHandler)
+        )
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
