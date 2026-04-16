@@ -3,6 +3,7 @@ package ChickenMayoDeopbab.bada.global.jwt;
 import ChickenMayoDeopbab.bada.global.common.ApiResponse;
 import ChickenMayoDeopbab.bada.global.common.ErrorResponse;
 import ChickenMayoDeopbab.bada.global.exception.ApplicationException;
+import ChickenMayoDeopbab.bada.global.exception.statuscode.JwtStatusCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

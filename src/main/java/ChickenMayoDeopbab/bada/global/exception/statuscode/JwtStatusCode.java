@@ -1,6 +1,5 @@
-package ChickenMayoDeopbab.bada.global.jwt;
+package ChickenMayoDeopbab.bada.global.exception.statuscode;
 
-import ChickenMayoDeopbab.bada.global.exception.statuscode.StatusCode;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;

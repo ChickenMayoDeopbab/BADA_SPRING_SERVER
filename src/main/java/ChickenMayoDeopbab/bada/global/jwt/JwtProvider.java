@@ -2,6 +2,7 @@ package ChickenMayoDeopbab.bada.global.jwt;
 
 import ChickenMayoDeopbab.bada.domain.user.entity.Role;
 import ChickenMayoDeopbab.bada.global.exception.ApplicationException;
+import ChickenMayoDeopbab.bada.global.exception.statuscode.JwtStatusCode;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
