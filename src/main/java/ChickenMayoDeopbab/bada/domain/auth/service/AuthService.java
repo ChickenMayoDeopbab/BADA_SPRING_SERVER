@@ -37,8 +37,8 @@ public class AuthService {
             throw new ApplicationException(AuthStatusCode.INVALID_PASSWORD);
         }
 
-        String accessToken = generateAccessToken(user.getUsername(), user.getRole(), response);
-        String refreshToken = generateRefreshToken(user.getUsername(), response);
+        String accessToken = generateAccessToken(user.getUserId(), user.getRole(), response);
+        String refreshToken = generateRefreshToken(user.getUserId(), response);
 
         return new TokenResponse(accessToken, refreshToken);
     }
@@ -47,16 +47,16 @@ public class AuthService {
     public TokenResponse refresh(
             RefreshRequest request,
             HttpServletResponse response) {
-        String refreshToken = redisTemplate.opsForValue().get("refreshToken: " + request.username());
+        String refreshToken = redisTemplate.opsForValue().get("refreshToken: " + request.userId());
 
-        if (!refreshToken.equals(request.refreshToken()) || refreshToken == null) {
-            redisTemplate.delete("refreshToken: " + request.username());
+        if ( refreshToken == null || !refreshToken.equals(request.refreshToken())) {
+            redisTemplate.delete("refreshToken: " + request.userId());
             throw new ApplicationException(AuthStatusCode.INVALID_REFRESH_TOKEN);
         }
-        Users user = getUser(request.username());
+        Users user = getUser(request.userId());
 
-        String accessToken = generateAccessToken(user.getUsername(), user.getRole(), response);
-        String newRefreshToken = generateRefreshToken(user.getUsername(), response);
+        String accessToken = generateAccessToken(user.getUserId(), user.getRole(), response);
+        String newRefreshToken = generateRefreshToken(user.getUserId(), response);
 
         return new TokenResponse(accessToken, newRefreshToken);
     }
@@ -69,7 +69,8 @@ public class AuthService {
     public void signOut(
             MemberDetails memberDetails,
             HttpServletResponse response) {
-        redisTemplate.delete("refreshToken: " + memberDetails.getUsername());
+        Users user = getUser(memberDetails.getUsername());
+        redisTemplate.delete("refreshToken: " + user.getUserId());
 
         addCookie(response, "accessToken", "", 0, true);
         addCookie(response, "refreshToken", "", 0, false);
@@ -81,12 +82,12 @@ public class AuthService {
      * - 인증 요청 시 자동 포함됨
      */
     private String generateAccessToken(
-            String username,
+            Long userId,
             Role role,
             HttpServletResponse response) {
-        String accessToken = jwtProvider.createAccessToken(username, role);
+        String accessToken = jwtProvider.createAccessToken(userId, role);
 
-        addCookie(response, "accessToken", accessToken, 3600, true);
+        addCookie(response, "accessToken", accessToken, 60 * 60, true);
 
         return accessToken;
     }
@@ -97,13 +98,13 @@ public class AuthService {
      * - HttpOnly=false: (필요 시 JS 접근 가능)
      */
     private String generateRefreshToken(
-            String username,
+            Long userId,
             HttpServletResponse response) {
-        String refreshToken = jwtProvider.createRefreshToken(username);
+        String refreshToken = jwtProvider.createRefreshToken(userId);
 
-        redisTemplate.opsForValue().set("refreshToken: " + username, refreshToken, Duration.ofDays(7));
+        redisTemplate.opsForValue().set("refreshToken: " + userId, refreshToken, Duration.ofDays(7));
 
-        addCookie(response, "refreshToken", refreshToken, 3600, false);
+        addCookie(response, "refreshToken", refreshToken, 60 * 60 * 24 * 7, false);
 
         return refreshToken;
     }
@@ -124,6 +125,12 @@ public class AuthService {
     private Users getUser(
             String username) {
         return usersRepository.findByUsername(username)
+                .orElseThrow(() -> new ApplicationException(UsersStatusCode.USER_NOT_FOUND));
+    }
+
+    private Users getUser(
+            Long userId) {
+        return usersRepository.findById(userId)
                 .orElseThrow(() -> new ApplicationException(UsersStatusCode.USER_NOT_FOUND));
     }
 }
