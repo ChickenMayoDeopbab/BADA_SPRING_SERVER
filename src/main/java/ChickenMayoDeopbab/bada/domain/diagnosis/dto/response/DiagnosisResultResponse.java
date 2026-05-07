@@ -8,13 +8,15 @@ import lombok.Getter;
 @Builder
 public class DiagnosisResultResponse {
     private double score;
-    private CallPhobiaLevel level;
+    private String levelName;
+    private String levelDescription;
     private String summary;
 
     public static DiagnosisResultResponse of(double score, CallPhobiaLevel level, String summary) {
         return DiagnosisResultResponse.builder()
                 .score(score)
-                .level(level)
+                .levelName(level.getName())
+                .levelDescription(level.getDescription())
                 .summary(summary)
                 .build();
     }
