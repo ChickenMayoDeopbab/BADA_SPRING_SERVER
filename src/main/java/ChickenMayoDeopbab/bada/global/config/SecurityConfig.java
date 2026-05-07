@@ -52,7 +52,8 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/auth/google",
-                                "/api/v1/auth/naver"
+                                "/api/v1/auth/naver",
+                                "/mypage"
                         ).permitAll()
                         .requestMatchers(
                                 "/",
