@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이메일 인증</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f6f8; font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f6f8; padding:40px 16px;">
+    <tr>
+        <td align="center">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px; background-color:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 4px 16px rgba(0,0,0,0.06);">
+                <tr>
+                    <td align="center" style="padding:32px 24px 16px 24px;">
+                        <img src="cid:serviceLogo" alt="ChickenMayoDeopbab" style="max-width:140px; height:auto; display:block;">
+                    </td>
+                </tr>
+
+                <tr>
+                    <td align="center" style="padding:8px 32px 8px 32px;">
+                        <h1 style="margin:0; font-size:22px; color:#1f2937; font-weight:700;">이메일 인증 코드</h1>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td align="center" style="padding:12px 32px 24px 32px;">
+                        <p style="margin:0; font-size:14px; line-height:1.6; color:#4b5563;">
+                            안녕하세요.<br>
+                            아래 <strong>6자리 인증 코드</strong>를 인증 화면에 입력해 주세요.
+                        </p>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td align="center" style="padding:0 32px 8px 32px;">
+                        <div style="display:inline-block; padding:18px 32px; background-color:#f0f4ff; border:1px solid #dbe4ff; border-radius:10px;">
+                            <span th:text="${authNum}"
+                                  style="font-size:32px; letter-spacing:8px; font-weight:700; color:#3b5bdb; font-family:'Courier New',monospace;">
+                                000000
+                            </span>
+                        </div>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td align="center" style="padding:16px 32px 8px 32px;">
+                        <p style="margin:0; font-size:13px; color:#6b7280; line-height:1.6;">
+                            인증 코드는 발송 시점부터 <strong style="color:#ef4444;">5분 동안</strong> 유효합니다.<br>
+                            시간이 지난 경우 인증 코드를 다시 요청해 주세요.
+                        </p>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="padding:24px 32px 0 32px;">
+                        <hr style="border:none; border-top:1px solid #e5e7eb; margin:0;">
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="padding:16px 32px 32px 32px;">
+                        <p style="margin:0; font-size:12px; color:#9ca3af; line-height:1.6;">
+                            본 메일은 발신 전용입니다. 본인이 요청하지 않은 인증 메일이라면 무시하셔도 됩니다.<br>
+                            계정 보안을 위해 인증 코드는 타인에게 공유하지 마세요.
+                        </p>
+                    </td>
+                </tr>
+            </table>
+
+            <p style="margin:16px 0 0 0; font-size:11px; color:#9ca3af;">
+                © ChickenMayoDeopbab. All rights reserved.
+            </p>
+        </td>
+    </tr>
+</table>
+</body>
+</html>
