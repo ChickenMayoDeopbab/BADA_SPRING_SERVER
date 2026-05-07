@@ -46,14 +46,21 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST,
                                 "/api/v1/auth/signup",
-                                "/api/v1/auth/login"
+                                "/api/v1/auth/login",
+                                "/api/v1/auth/email/send",
+                                "/api/v1/auth/email/check"
+                        ).permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/auth/google",
+                                "/api/v1/auth/naver"
                         ).permitAll()
                         .requestMatchers(
                                 "/",
                                 "/css/**",
                                 "images/**",
                                 "/js/**",
-                                "/login/*",
+                                "/login/**",
+                                "/oauth2/**",
                                 "/logout/*",
                                 "/posts/**",
                                 "/comments/**"
