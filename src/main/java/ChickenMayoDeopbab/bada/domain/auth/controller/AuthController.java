@@ -33,7 +33,7 @@ public class AuthController {
     public ApiResponse<Void> signup(
             @Valid @RequestBody SignUpRequest request) {
         userService.signUp(request);
-        return ApiResponse.ok(null, "회원가입에 성공했습니다.");
+        return ApiResponse.ok("회원가입에 성공했습니다.");
     }
 
     //자체 로그인
@@ -62,7 +62,7 @@ public class AuthController {
             @AuthenticationPrincipal MemberDetails memberDetails,
             HttpServletResponse response) {
         authService.signOut(memberDetails, response);
-        return ApiResponse.ok(null, "로그아웃 되었습니다.");
+        return ApiResponse.ok("로그아웃 되었습니다.");
     }
 
     @GetMapping("/google")
