@@ -1,6 +1,6 @@
 package ChickenMayoDeopbab.bada.domain.auth.controller;
 
-import ChickenMayoDeopbab.bada.domain.auth.dto.request.LoginRequest;
+import  ChickenMayoDeopbab.bada.domain.auth.dto.request.LoginRequest;
 import ChickenMayoDeopbab.bada.domain.auth.dto.request.RefreshRequest;
 import ChickenMayoDeopbab.bada.domain.auth.dto.response.TokenResponse;
 import ChickenMayoDeopbab.bada.domain.auth.service.AuthService;
@@ -13,13 +13,16 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.IOException;
+
 @RestController
-@RequestMapping("api/v1/auth")
+@RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 public class AuthController {
     private final UserService userService;
@@ -60,5 +63,15 @@ public class AuthController {
             HttpServletResponse response) {
         authService.signOut(memberDetails, response);
         return ApiResponse.ok(null, "로그아웃 되었습니다.");
+    }
+
+    @GetMapping("/google")
+    public void googleLogin(HttpServletResponse response) throws IOException {
+        response.sendRedirect("/oauth2/authorization/google");
+    }
+
+    @GetMapping("/naver")
+    public void naverLogin(HttpServletResponse response) throws IOException {
+        response.sendRedirect("/oauth2/authorization/naver");
     }
 }
