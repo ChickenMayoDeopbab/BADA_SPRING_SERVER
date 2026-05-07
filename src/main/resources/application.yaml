@@ -69,6 +69,9 @@ spring:
           starttls:
             enable: true
 
+  openai:
+    api-key: ${OPENAI-API-KEY}
+
 app:
   jwt:
     secret: ${JWT_SECRET}

@@ -1,7 +1,5 @@
 package ChickenMayoDeopbab.bada.domain.diagnosis.entity;
 
-import ChickenMayoDeopbab.bada.domain.user.entity.Provider;
-import ChickenMayoDeopbab.bada.domain.user.entity.Role;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -10,12 +8,12 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Entity
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
+@Table(name = "diagnosis_results")
 @Builder
 public class DiagnosisResult {
     @Id
@@ -39,6 +37,9 @@ public class DiagnosisResult {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private CallPhobiaLevel level;
+
+    @Column(columnDefinition = "TEXT")
+    private String summary;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;

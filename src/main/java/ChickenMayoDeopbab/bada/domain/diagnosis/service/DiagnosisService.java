@@ -4,6 +4,7 @@ import ChickenMayoDeopbab.bada.domain.diagnosis.dto.request.DiagnosisSubmitReque
 import ChickenMayoDeopbab.bada.domain.diagnosis.dto.response.DiagnosisQuestionResponse;
 import ChickenMayoDeopbab.bada.domain.diagnosis.dto.response.DiagnosisResultResponse;
 import ChickenMayoDeopbab.bada.domain.diagnosis.entity.CallPhobiaLevel;
+import ChickenMayoDeopbab.bada.domain.diagnosis.entity.DiagnosisQuestion;
 import ChickenMayoDeopbab.bada.domain.diagnosis.entity.DiagnosisResult;
 import ChickenMayoDeopbab.bada.domain.diagnosis.entity.DiagnosisType;
 import ChickenMayoDeopbab.bada.domain.diagnosis.repository.DiagnosisRepository;
@@ -22,6 +23,7 @@ public class DiagnosisService {
     private final DiagnosisRepository diagnosisRepository;
     private final DiagnosisResultRepository diagnosisResultRepository;
     private final UsersRepository usersRepository;
+    private final DiagnosisAiService diagnosisAiService;
 
     @Transactional(readOnly = true)
     public List<DiagnosisQuestionResponse> getQuestions(DiagnosisType type) {
@@ -36,6 +38,10 @@ public class DiagnosisService {
         double score = calculateScore(request.getAnswers());
         CallPhobiaLevel level = calculateLevel(score);
 
+        List<DiagnosisQuestion> questions = diagnosisRepository.findByTypeOrderByOrderIndex(request.getType());
+
+        String summary = diagnosisAiService.generateSummary(questions, request.getAnswers());
+
         Users user = null;
         if (request.getUserId() != null) {
             user = usersRepository.findById(request.getUserId())
@@ -47,9 +53,10 @@ public class DiagnosisService {
                 .type(request.getType())
                 .score(score)
                 .level(level)
+                .summary(summary)
                 .build();
         diagnosisResultRepository.save(result);
-        return DiagnosisResultResponse.of(score, level);
+        return DiagnosisResultResponse.of(score, level, summary);
     }
 
     private double calculateScore(List<Integer> answers) {

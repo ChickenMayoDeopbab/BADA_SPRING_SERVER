@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
+@Table(name = "diagnosis_questions")
 @Builder
 public class DiagnosisQuestion {
     @Id

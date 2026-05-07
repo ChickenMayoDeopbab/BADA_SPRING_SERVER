@@ -9,11 +9,13 @@ import lombok.Getter;
 public class DiagnosisResultResponse {
     private double score;
     private CallPhobiaLevel level;
+    private String summary;
 
-    public static DiagnosisResultResponse of(double score, CallPhobiaLevel level) {
+    public static DiagnosisResultResponse of(double score, CallPhobiaLevel level, String summary) {
         return DiagnosisResultResponse.builder()
                 .score(score)
                 .level(level)
+                .summary(summary)
                 .build();
     }
 }

@@ -48,11 +48,13 @@ public class SecurityConfig {
                                 "/api/v1/auth/signup",
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/email/send",
-                                "/api/v1/auth/email/check"
+                                "/api/v1/auth/email/check",
+                                "api/diagnosis/submit"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/auth/google",
-                                "/api/v1/auth/naver"
+                                "/api/v1/auth/naver",
+                                "/api/diagnosis/questions"
                         ).permitAll()
                         .requestMatchers(
                                 "/",
