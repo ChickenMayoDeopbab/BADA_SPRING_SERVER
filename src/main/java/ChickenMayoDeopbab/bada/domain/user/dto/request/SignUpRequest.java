@@ -13,7 +13,7 @@ public record SignUpRequest(
         @Email
         String email
 ) {
-        public Users toEntity(String username, String password, String email) {
+        public Users toEntity(String password) {
                 return Users.builder()
                         .username(username)
                         .password(password)
