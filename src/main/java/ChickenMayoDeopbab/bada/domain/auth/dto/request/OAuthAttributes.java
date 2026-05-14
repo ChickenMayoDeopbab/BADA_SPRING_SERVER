@@ -64,7 +64,7 @@ public class OAuthAttributes {
                 .nameAttributeKey("id")
                 .name((String) response.get("name"))
                 .email((String) response.get("email"))
-                .picture((String) response.get("picture"))
+                .picture((String) response.get("profile_image"))
                 .provider(Provider.NAVER)
                 .build();
     }

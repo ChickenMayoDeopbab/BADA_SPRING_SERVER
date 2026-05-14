@@ -72,6 +72,7 @@ public class EmailService {
 
         if (Objects.equals(code, authNum)) {
             redisConfig.redisTemplate().delete(email);
+            valueOperations.set(email, "ACCESS", 5, TimeUnit.MINUTES);
             return ApiResponse.ok(Boolean.TRUE, "이메일 인증에 성공했습니다.");
         }
         throw new ApplicationException(AuthStatusCode.INVALID_VERIFICATION_CODE);
