@@ -34,6 +34,14 @@ public class UserService {
         redisTemplate.delete(request.email());
     }
 
+    public ApiResponse<MyPageResponse> myPage() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Users user = usersRepository.findByUsername(auth.getName())
+                .orElseThrow(() -> new ApplicationException(UsersStatusCode.USER_NOT_FOUND));
+
+        return ApiResponse.ok(MyPageResponse.of(user.getUsername(), user.getProfileImage()));
+    }
+
     //  아이디 검증 및 이메일인 중복 검사
     private void validateDuplicates(String username, String email) {
         if (usersRepository.existsByUsername(username)) {

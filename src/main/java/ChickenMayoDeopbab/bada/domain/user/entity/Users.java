@@ -30,7 +30,7 @@ public class Users {
     @Column(nullable = false)
     private String email;
 
-    private String profileImage;
+    private String profileImage = "https://dasjkdj.s3.ap-northeast-2.amazonaws.com/default_profile.png";
 
     @Column(columnDefinition = "integer default 0")
     private int totalTrainingCount = 0;
