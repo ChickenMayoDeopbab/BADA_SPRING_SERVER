@@ -19,8 +19,8 @@ public class AttendanceController {
     private final AttendanceService attendanceService;
 
     @PostMapping
-    public ApiResponse<Boolean> Attend() {
-        return attendanceService.Attend();
+    public ApiResponse<Boolean> attend() {
+        return attendanceService.attend();
     }
 
     @GetMapping

@@ -25,7 +25,7 @@ public class AttendanceService {
     private final UsersRepository usersRepository;
     private final AttendanceQueryRepository attendanceQueryRepository;
 
-    public ApiResponse<Boolean> Attend() {
+    public ApiResponse<Boolean> attend() {
         Users userInfo = getUserInfo();
         LocalDate now = LocalDate.now();
         if (attendanceRepository.existsByAttendedDateAndUser(now, userInfo)) {
