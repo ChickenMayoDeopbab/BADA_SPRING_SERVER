@@ -40,6 +40,9 @@ public class AttendanceService {
 
     public ApiResponse<List<GetAttendanceResponse>> getMonthlyAttendance(int year,int month) {
         Users userInfo = getUserInfo();
+        if (month < 1 || month > 12) {
+            throw new ApplicationException(AttendanceStatusCode.INVALID_MONTH);
+        }
         List<Attendance> attendances = attendanceQueryRepository.getAttendanceByYearAndMonth(year, month, userInfo);
         return ApiResponse.ok(GetAttendanceResponse.fromList(attendances));
     }
