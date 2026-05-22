@@ -28,7 +28,8 @@ public class SwaggerConfig {
 
         return new OpenAPI()
                 .servers(List.of(
-                        new Server().url("http://localhost:8080").description("Local")
+                        new Server().url("http://localhost:8080").description("Local"),
+                        new Server().url("http://3.39.219.113:8080").description("Production")
                 ))
                 .components(new Components().addSecuritySchemes(HttpHeaders.AUTHORIZATION, securityScheme))
                 .addSecurityItem(securityRequirement)
