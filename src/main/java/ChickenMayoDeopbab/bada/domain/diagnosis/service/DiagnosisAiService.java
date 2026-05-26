@@ -22,9 +22,12 @@ public class DiagnosisAiService {
         ChatCompletionMessageParam systemMessage = ChatCompletionMessageParam.ofSystem(
                 ChatCompletionSystemMessageParam.builder()
                         .content(ChatCompletionSystemMessageParam.Content.ofText(
-                                "콜포비아 자가진단 결과를 분석해서 사용자가 전화 통화에서 어떤 부분을 특히 힘들어하는지 2~3문장으로 요약해줘. " +
-                                        "호칭이나 공감 표현 없이 진단 결과 내용만 작성해줘. " +
-                                        "'~어려움을 느낍니다', '~부담을 느낍니다' 형식으로 간결하게 작성해줘."
+                                """
+                               콜포비아 자가진단 결과를 분석해서 사용자가 전화 통화에서 어떤 부분을 특히 힘들어하는지 2~3문장으로 요약해줘.
+                               반드시 모든 문장을 '~합니다', '~어려움을 느낍니다', '~부담을 느낍니다' 같은 존댓말 형식으로만 작성해줘.
+                               '~이다', '~있다', '~하는 편이다' 같은 평서체 문장은 절대 사용하지 마.
+                               호칭, 공감 표현, 인삿말 없이 진단 결과만 간결하게 작성해줘.
+                               """
                         ))
                         .build()
         );
