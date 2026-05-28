@@ -11,13 +11,16 @@ public record SignUpRequest(
         String password,
         @NotBlank
         @Email
-        String email
+        String email,
+        @NotBlank
+        String name
 ) {
         public Users toEntity(String password) {
                 return Users.builder()
                         .username(username)
                         .password(password)
                         .email(email)
+                        .name(name)
                         .build();
         }
 }
