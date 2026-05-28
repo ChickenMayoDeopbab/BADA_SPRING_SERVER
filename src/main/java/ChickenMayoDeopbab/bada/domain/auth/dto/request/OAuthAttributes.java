@@ -48,6 +48,7 @@ public class OAuthAttributes {
         return Users.builder()
                 .username("USER_" + UUID.randomUUID().toString().substring(0, 8))
                 .email(email)
+                .name(name)
                 .profileImage(picture)
                 .provider(provider)
                 .providerId(String.valueOf(attributes.get(nameAttributeKey)))

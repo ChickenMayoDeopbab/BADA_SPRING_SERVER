@@ -1,5 +1,6 @@
 package ChickenMayoDeopbab.bada.domain.auth.controller;
 
+import ChickenMayoDeopbab.bada.domain.auth.dto.request.ChangePasswordRequest;
 import ChickenMayoDeopbab.bada.domain.auth.dto.request.EmailRequest;
 import ChickenMayoDeopbab.bada.domain.auth.dto.request.EmailVerificationRequest;
 import  ChickenMayoDeopbab.bada.domain.auth.dto.request.LoginRequest;
@@ -17,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -96,5 +98,19 @@ public class AuthController {
     public ApiResponse<?> checkEmail(
             @RequestBody @Valid EmailVerificationRequest request) {
         return emailService.checkEmail(request.email(), request.authNum());
+    }
+
+    // 비밀번호 변경
+    @PatchMapping("/password")
+    public ApiResponse<?> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request) {
+        return authService.changePassword(request);
+    }
+
+    // 아이디 찾기
+    @PostMapping("/find-id")
+    public ApiResponse<String> findId(
+            @Valid @RequestBody EmailRequest request) {
+        return authService.findId(request.email());
     }
 }
