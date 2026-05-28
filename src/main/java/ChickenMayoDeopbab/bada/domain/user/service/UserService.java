@@ -39,7 +39,7 @@ public class UserService {
         Users user = usersRepository.findByUsername(auth.getName())
                 .orElseThrow(() -> new ApplicationException(UsersStatusCode.USER_NOT_FOUND));
 
-        return ApiResponse.ok(MyPageResponse.of(user.getUsername(), user.getProfileImage()));
+        return ApiResponse.ok(MyPageResponse.of(user.getUsername(), user.getEmail()));
     }
 
     //  아이디 검증 및 이메일인 중복 검사
