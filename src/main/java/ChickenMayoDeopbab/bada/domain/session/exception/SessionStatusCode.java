@@ -9,7 +9,9 @@ import org.springframework.http.HttpStatus;
 @AllArgsConstructor
 public enum SessionStatusCode implements StatusCode {
     SCENARIO_NOT_FOUND(HttpStatus.NOT_FOUND, "SESSION_001", "시나리오를 찾을 수 없습니다."),
-    REDIS_WRITE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "SESSION_002", "세션 저장에 실패했습니다.");
+    REDIS_WRITE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "SESSION_002", "세션 저장에 실패했습니다."),
+    INVALID_INTERNAL_SECRET(HttpStatus.UNAUTHORIZED, "SESSION_003", "내부 인증에 실패했습니다."),
+    REDIS_READ_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "SESSION_004", "세션 조회에 실패했습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
