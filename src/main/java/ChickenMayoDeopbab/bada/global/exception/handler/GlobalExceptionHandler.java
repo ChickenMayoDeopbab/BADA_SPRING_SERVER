@@ -15,12 +15,33 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Set<String> CLIENT_ABORT_MESSAGES = Set.of(
+            "Broken pipe",
+            "Connection reset",
+            "Connection reset by peer",
+            "An established connection was aborted"
+    );
+
+    private boolean isClientAbort(Throwable ex) {
+        for (Throwable t = ex; t != null; t = t.getCause()) {
+            if (t instanceof IOException && t.getMessage() != null) {
+                String message = t.getMessage();
+                if (CLIENT_ABORT_MESSAGES.stream().anyMatch(message::contains)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 
     @ExceptionHandler(ApplicationException.class)
     public ResponseEntity<ApiResponse<Void>> handleApplicationException(ApplicationException ex) {
@@ -72,9 +93,23 @@ public class GlobalExceptionHandler {
         return CommonStatusCode.UNKNOWN_ENDPOINT.toEntity();
     }
 
+    @ExceptionHandler(IOException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIOException(IOException ex) {
+        if (isClientAbort(ex)) {
+            log.debug("클라이언트 연결이 끊겼습니다: {}", ex.getMessage());
+            return null;
+        }
+        log.error("IO 처리 중 에러가 발생했습니다.", ex);
+        return CommonStatusCode.INTERNAL_SERVER_ERROR.toEntity();
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleException(Exception ex) {
-        log.error("요청 처리 중 에러 발생: {}", ex.getMessage());
+        if (isClientAbort(ex)) {
+            log.debug("클라이언트 연결이 끊겼습니다.: {}", ex.getMessage());
+            return null;
+        }
+        log.error("요청 처리 중 에러가 발생했습니다.", ex);
         return CommonStatusCode.INTERNAL_SERVER_ERROR.toEntity();
     }
 }
