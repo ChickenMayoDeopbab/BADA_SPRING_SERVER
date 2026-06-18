@@ -3,6 +3,7 @@ package ChickenMayoDeopbab.bada.global.exception.statuscode;
 import ChickenMayoDeopbab.bada.global.common.ApiResponse;
 import ChickenMayoDeopbab.bada.global.common.ErrorResponse;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
 import java.util.Map;
@@ -16,6 +17,7 @@ public interface StatusCode {
         ErrorResponse error = ErrorResponse.of(getCode(), getMessage());
         return ResponseEntity
                 .status(getHttpStatus())
+                .contentType(MediaType.APPLICATION_JSON)
                 .body(ApiResponse.error(getHttpStatus(), error));
     }
 
@@ -23,6 +25,7 @@ public interface StatusCode {
         ErrorResponse error = ErrorResponse.of(getCode(), message);
         return ResponseEntity
                 .status(getHttpStatus())
+                .contentType(MediaType.APPLICATION_JSON)
                 .body(ApiResponse.error(getHttpStatus(), error));
     }
 
@@ -30,6 +33,7 @@ public interface StatusCode {
         ErrorResponse error = ErrorResponse.of(getCode(), message, details);
         return ResponseEntity
                 .status(getHttpStatus())
+                .contentType(MediaType.APPLICATION_JSON)
                 .body(ApiResponse.error(getHttpStatus(), error));
     }
 }
