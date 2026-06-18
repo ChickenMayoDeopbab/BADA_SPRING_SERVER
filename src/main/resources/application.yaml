@@ -78,3 +78,9 @@ app:
     access-expiration: ${JWT_ACCESS_EXPIRATION}
     refresh-expiration: ${JWT_REFRESH_EXPIRATION}
   server-url: ${SERVER_URL}
+
+  ai:
+    base-url: ${AI_BASE_URL}
+    ws-base-url: ${AI_WS_BASE_URL}
+  internal:
+    secret: ${INTERNAL_SECRET}
