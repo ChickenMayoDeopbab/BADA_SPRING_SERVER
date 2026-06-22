@@ -16,12 +16,6 @@ services:
       retries: 5
     restart: unless-stopped
 
-  redis:
-    image: redis:7-alpine
-    volumes:
-      - redis_data:/data
-    restart: unless-stopped
-
   app:
     image: ehdus/bada:latest
     ports:
@@ -31,10 +25,14 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      redis:
-        condition: service_started
+    networks:
+      - default
+      - bada-net
     restart: unless-stopped
 
 volumes:
   postgres_data:
-  redis_data:
+
+networks:
+  bada-net:
+    external: true
