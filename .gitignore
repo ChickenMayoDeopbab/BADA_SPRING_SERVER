@@ -39,3 +39,5 @@ src/main/resources/application-local.properties
 
 # macOS
 .DS_Store
+
+.records
