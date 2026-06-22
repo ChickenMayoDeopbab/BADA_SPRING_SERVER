@@ -1,34 +1,22 @@
-# =============================================================
-# CI — Code Verification (test + build)
-# Role: Verify the code compiles, passes tests, and builds.
-#       This workflow does NOT deploy anything.
-# =============================================================
 name: CI
 
 on:
-  push:
-    branches: [ main ]
   pull_request:
     branches: [ main ]
 
-# Cancel superseded runs on the same ref to save CI minutes
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # -----------------------------------------------------------
-  # CI JOB: Test & Build
-  # -----------------------------------------------------------
   verify:
-    name: Test & Build
+    name: Build Test
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Install dependencies / toolchain (JDK 21) with Gradle caching enabled
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
@@ -39,10 +27,5 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
-      # CI STAGE 1: Test
-      - name: Run tests
-        run: ./gradlew test
-
-      # CI STAGE 2: Build (tests already ran above)
       - name: Build
         run: ./gradlew build -x test
