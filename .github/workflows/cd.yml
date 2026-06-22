@@ -1,28 +1,16 @@
-# =============================================================
-# CD — Deployment (SSH + docker compose)
-# Role: Deploy to the production server.
-#       Runs ONLY after the CI workflow succeeds on main.
-# =============================================================
 name: CD
 
 on:
-  # Trigger after the "CI" workflow completes.
-  # The job-level guard below ensures we deploy only on SUCCESS + main.
   workflow_run:
     workflows: [ "CI" ]
     types:
       - completed
 
-# Prevent overlapping deployments
 concurrency:
   group: cd-deploy-production
   cancel-in-progress: false
 
 jobs:
-  # -----------------------------------------------------------
-  # CD JOB: Deploy to production over SSH
-  # Guard: deploy only when CI succeeded AND the trigger was main.
-  # -----------------------------------------------------------
   deploy:
     name: Deploy to Production (SSH)
     runs-on: ubuntu-latest
