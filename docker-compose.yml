@@ -26,8 +26,10 @@ services:
       db:
         condition: service_healthy
     networks:
-      - default
-      - bada-net
+      default: {}
+      bada-net:
+        aliases:
+          - spring-app
     restart: unless-stopped
 
 volumes:
