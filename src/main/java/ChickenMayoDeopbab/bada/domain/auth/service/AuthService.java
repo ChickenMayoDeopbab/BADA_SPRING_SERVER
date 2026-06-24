@@ -1,6 +1,7 @@
 package ChickenMayoDeopbab.bada.domain.auth.service;
 
 import ChickenMayoDeopbab.bada.domain.auth.dto.request.ChangePasswordRequest;
+import ChickenMayoDeopbab.bada.domain.auth.dto.request.CheckUsernameRequest;
 import ChickenMayoDeopbab.bada.domain.auth.dto.request.LoginRequest;
 import ChickenMayoDeopbab.bada.domain.auth.dto.request.RefreshRequest;
 import ChickenMayoDeopbab.bada.domain.auth.dto.response.TokenResponse;
@@ -46,6 +47,12 @@ public class AuthService {
         String refreshToken = generateRefreshToken(user.getUserId(), response);
 
         return new TokenResponse(accessToken, refreshToken);
+    }
+
+    public void checkUsername(CheckUsernameRequest request) {
+        if (usersRepository.existsByUsername(request.username())) {
+            throw new ApplicationException(AuthStatusCode.ALREADY_EXIST_USERNAME);
+        }
     }
 
     // RefreshToken와 username을 받고 새로운 AccessToken와 RefreshToken을 반환
