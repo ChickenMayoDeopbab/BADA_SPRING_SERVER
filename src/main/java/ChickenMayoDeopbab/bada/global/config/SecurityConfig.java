@@ -51,6 +51,7 @@ public class SecurityConfig {
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/email/send",
                                 "/api/v1/auth/email/check",
+                                "/api/v1/auth/check/username",
                                 "api/diagnosis/submit"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET,
