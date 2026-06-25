@@ -1,5 +1,7 @@
 package ChickenMayoDeopbab.bada.domain.session.dto.request;
 
+import ChickenMayoDeopbab.bada.domain.session.dto.response.GoodSegments;
+import ChickenMayoDeopbab.bada.domain.session.dto.response.SessionClosedResponse;
 import ChickenMayoDeopbab.bada.domain.session.enums.EndReason;
 import ChickenMayoDeopbab.bada.domain.session.model.GoodSegment;
 import ChickenMayoDeopbab.bada.domain.session.model.TranscriptTurn;

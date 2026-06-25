@@ -1,6 +1,7 @@
 package ChickenMayoDeopbab.bada.domain.session.controller;
 
 import ChickenMayoDeopbab.bada.domain.session.dto.request.SessionClosedRequest;
+import ChickenMayoDeopbab.bada.domain.session.dto.response.SessionClosedResponse;
 import ChickenMayoDeopbab.bada.domain.session.exception.SessionStatusCode;
 import ChickenMayoDeopbab.bada.domain.session.service.SessionService;
 import ChickenMayoDeopbab.bada.global.common.ApiResponse;
@@ -21,7 +22,7 @@ public class InternalSessionController {
     private String internalSecret;
 
     @PostMapping("/{sessionId}/closed")
-    public ApiResponse<Void> onSessionClosed(
+    public ApiResponse<SessionClosedResponse> onSessionClosed(
             @PathVariable String sessionId,
             @RequestHeader(value = "X-Internal-Secret", required = false) String secret,
             @RequestBody SessionClosedRequest request) {
