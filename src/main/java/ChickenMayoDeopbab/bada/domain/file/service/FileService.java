@@ -32,7 +32,6 @@ public class FileService {
     @Value("${spring.cloud.aws.s3.bucket}")
     private String bucket;
 
-    // presigned url 유효 시간 (10분)
     private static final Duration PRESIGNED_URL_EXPIRATION = Duration.ofMinutes(10);
 
     public FileUploadResponse upload(MultipartFile multipartFile, FileType fileType) {
