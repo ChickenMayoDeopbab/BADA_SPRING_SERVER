@@ -17,6 +17,7 @@ public interface SessionRecordPort {
             List<TranscriptTurn> transcript,
             Double silenceTotal,
             Integer shakeCount,
-            List<GoodSegment> goodSegments
+            List<GoodSegment> goodSegments,
+            String recordingUrl
     );
 }
