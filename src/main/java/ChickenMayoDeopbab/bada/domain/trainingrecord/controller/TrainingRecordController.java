@@ -1,5 +1,6 @@
 package ChickenMayoDeopbab.bada.domain.trainingrecord.controller;
 
+import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.FeedbackResponse;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.TrainingRecordDetailResponse;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.TrainingRecordResponse;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.service.TrainingRecordService;
@@ -31,5 +32,10 @@ public class TrainingRecordController {
     @GetMapping("/{recordId}")
     public ApiResponse<TrainingRecordDetailResponse> getTrainingRecord(@PathVariable Long recordId) {
         return ApiResponse.ok(trainingRecordService.getTrainingRecord(recordId));
+    }
+
+    @GetMapping("/feedback")
+    public FeedbackResponse getFeedback(@RequestParam("recordId") Long recordId) {
+        return trainingRecordService.getFeedback(recordId);
     }
 }
