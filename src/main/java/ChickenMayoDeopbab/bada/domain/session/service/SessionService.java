@@ -4,6 +4,7 @@ import ChickenMayoDeopbab.bada.domain.session.dto.request.CreateSessionRequest;
 import ChickenMayoDeopbab.bada.domain.session.dto.response.CreateSessionResponse;
 import ChickenMayoDeopbab.bada.domain.session.enums.EndReason;
 import ChickenMayoDeopbab.bada.domain.session.enums.SessionType;
+import ChickenMayoDeopbab.bada.domain.session.model.GoodSegment;
 import ChickenMayoDeopbab.bada.domain.session.model.ScenarioContext;
 import ChickenMayoDeopbab.bada.domain.session.model.SessionContext;
 import ChickenMayoDeopbab.bada.domain.session.model.TranscriptTurn;
@@ -21,6 +22,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -44,9 +46,11 @@ public class SessionService {
 
         SessionContext context = new SessionContext(
                 user.getUserId(),
+                request.scenarioId(),
                 request.type(),
                 request.aiPersonality(),
                 resolveMaxDuration(request),
+                LocalDateTime.now(),
                 scenario
         );
 
@@ -58,13 +62,20 @@ public class SessionService {
     }
 
     // FastAPI 종료 콜백 처리, 기록 위임 후 레디스 세션 정리.
-    public void close(String sessionId, EndReason reason, List<TranscriptTurn> transcript) {
+    public void close(
+            String sessionId,
+            EndReason reason,
+            List<TranscriptTurn> transcript,
+            Double silenceTotal,
+            Integer shakeCount,
+            List<GoodSegment> goodSegments
+    ) {
         SessionContext context = sessionRedisRepository.find(sessionId);
         if (context == null) {
             log.warn("종료 콜백 - 세션 없음(만료/미존재) sessionId={} reason={}", sessionId, reason);
             return;
         }
-        sessionRecordPort.record(sessionId, context, reason, transcript);
+        sessionRecordPort.record(sessionId, context, reason, transcript, silenceTotal, shakeCount, goodSegments);
         sessionRedisRepository.delete(sessionId);
     }
 

@@ -1,6 +1,7 @@
 package ChickenMayoDeopbab.bada.domain.session.port;
 
 import ChickenMayoDeopbab.bada.domain.session.enums.EndReason;
+import ChickenMayoDeopbab.bada.domain.session.model.GoodSegment;
 import ChickenMayoDeopbab.bada.domain.session.model.SessionContext;
 import ChickenMayoDeopbab.bada.domain.session.model.TranscriptTurn;
 import lombok.extern.slf4j.Slf4j;
@@ -15,10 +16,19 @@ import java.util.List;
 public class LoggingSessionRecordAdapter implements SessionRecordPort {
 
     @Override
-    public void record(String sessionId, SessionContext context, EndReason reason, List<TranscriptTurn> transcript) {
+    public void record(
+            String sessionId,
+            SessionContext context,
+            EndReason reason,
+            List<TranscriptTurn> transcript,
+            Double silenceTotal,
+            Integer shakeCount,
+            List<GoodSegment> goodSegments
+    ) {
         Long userId = context != null ? context.userId() : null;
         int turns = transcript != null ? transcript.size() : 0;
-        log.info("세션 종료 기록 수신 sessionId={} userId={} reason={} turns={}",
-                sessionId, userId, reason, turns);
+        int goodSegmentCount = goodSegments != null ? goodSegments.size() : 0;
+        log.info("세션 종료 기록 수신 sessionId={} userId={} reason={} turns={} silenceTotal={} shakeCount={} goodSegments={}",
+                sessionId, userId, reason, turns, silenceTotal, shakeCount, goodSegmentCount);
     }
 }

@@ -29,7 +29,14 @@ public class InternalSessionController {
         if (!internalSecret.equals(secret)) {
             throw ApplicationException.of(SessionStatusCode.INVALID_INTERNAL_SECRET);
         }
-        sessionService.close(sessionId, request.reason(), request.transcript());
-        return ApiResponse.ok(SessionClosedResponse.of(request),"세션 종료가 처리되었습니다.");
+        sessionService.close(
+                sessionId,
+                request.reason(),
+                request.transcript(),
+                request.silenceTotal(),
+                request.shakeCount(),
+                request.goodSegments()
+        );
+        return ApiResponse.ok("세션 종료가 처리되었습니다.");
     }
 }

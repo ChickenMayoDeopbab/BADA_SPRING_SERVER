@@ -1,9 +1,9 @@
 package ChickenMayoDeopbab.bada.domain.session.dto.request;
 
-import ChickenMayoDeopbab.bada.domain.session.dto.response.GoodSegments;
-import ChickenMayoDeopbab.bada.domain.session.dto.response.SessionClosedResponse;
 import ChickenMayoDeopbab.bada.domain.session.enums.EndReason;
+import ChickenMayoDeopbab.bada.domain.session.model.GoodSegment;
 import ChickenMayoDeopbab.bada.domain.session.model.TranscriptTurn;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 
@@ -11,8 +11,11 @@ import java.util.List;
 public record SessionClosedRequest(
         EndReason reason,
         List<TranscriptTurn> transcript,
-        float silence_total,
-        int shake_count,
-        List<GoodSegments> good_segments
+        @JsonProperty("silence_total")
+        Double silenceTotal,
+        @JsonProperty("shake_count")
+        Integer shakeCount,
+        @JsonProperty("good_segments")
+        List<GoodSegment> goodSegments
 ) {
 }
