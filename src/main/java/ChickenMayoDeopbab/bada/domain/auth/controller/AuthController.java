@@ -1,6 +1,7 @@
 package ChickenMayoDeopbab.bada.domain.auth.controller;
 
 import ChickenMayoDeopbab.bada.domain.auth.dto.request.ChangePasswordRequest;
+import ChickenMayoDeopbab.bada.domain.auth.dto.request.CheckUsernameRequest;
 import ChickenMayoDeopbab.bada.domain.auth.dto.request.EmailRequest;
 import ChickenMayoDeopbab.bada.domain.auth.dto.request.EmailVerificationRequest;
 import  ChickenMayoDeopbab.bada.domain.auth.dto.request.LoginRequest;
@@ -50,6 +51,13 @@ public class AuthController {
         TokenResponse res = authService.login(request, response);
 
         return ApiResponse.ok(res, "로그인에 성공했습니다.");
+    }
+
+    // 중복 아이디 검사
+    @PostMapping("/check/username")
+    public ApiResponse<Boolean> checkUsername(@RequestBody @Valid CheckUsernameRequest request) {
+        authService.checkUsername(request);
+        return ApiResponse.ok(Boolean.TRUE);
     }
 
     // 리프래시

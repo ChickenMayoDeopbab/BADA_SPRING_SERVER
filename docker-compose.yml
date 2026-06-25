@@ -17,6 +17,9 @@ services:
     restart: unless-stopped
 
   app:
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: ehdus/bada:latest
     ports:
       - "8080:8080"
@@ -26,8 +29,10 @@ services:
       db:
         condition: service_healthy
     networks:
-      - default
-      - bada-net
+      default: {}
+      bada-net:
+        aliases:
+          - spring-app
     restart: unless-stopped
 
 volumes:
