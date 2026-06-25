@@ -2,6 +2,7 @@ package ChickenMayoDeopbab.bada.domain.trainingrecord.service;
 
 import ChickenMayoDeopbab.bada.domain.session.model.GoodSegment;
 import ChickenMayoDeopbab.bada.domain.session.model.TranscriptTurn;
+import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.FeedbackResponse;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.PositiveFeedbackResponse;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.TrainingRecordDetailResponse;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.TrainingRecordResponse;
@@ -50,6 +51,17 @@ public class TrainingRecordService {
                 parseGoodSegments(record.getGoodSegments()).stream()
                         .map(PositiveFeedbackResponse::from)
                         .toList()
+        );
+    }
+
+    public FeedbackResponse getFeedback(Long recordId) {
+        Users user = getUserInfo();
+        TrainingRecord trainingRecord = trainingRecordRepository.findByRecordIdAndUser(recordId, user)
+                .orElseThrow(() -> new ApplicationException(TrainingRecordStatusCode.RECORD_NOT_FOUND));
+
+        return FeedbackResponse.of(
+                trainingRecord,
+                parseGoodSegments(trainingRecord.getGoodSegments())
         );
     }
 
