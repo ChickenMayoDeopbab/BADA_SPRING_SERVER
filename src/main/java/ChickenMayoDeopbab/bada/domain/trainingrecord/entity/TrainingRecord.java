@@ -73,8 +73,6 @@ public class TrainingRecord {
 
     private String recordingUrl;
 
-    private String imageUrl;
-
     @Builder
     private TrainingRecord(
             Users user,
@@ -89,8 +87,7 @@ public class TrainingRecord {
             Long durationSeconds,
             String transcript,
             String goodSegments,
-            String recordingUrl,
-            String imageUrl
+            String recordingUrl
     ) {
         this.user = user;
         this.sessionId = sessionId;
@@ -105,6 +102,5 @@ public class TrainingRecord {
         this.transcript = transcript;
         this.goodSegments = goodSegments;
         this.recordingUrl = recordingUrl;
-        this.imageUrl = imageUrl;
     }
 }
