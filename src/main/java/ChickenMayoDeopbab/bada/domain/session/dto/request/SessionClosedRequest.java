@@ -16,6 +16,8 @@ public record SessionClosedRequest(
         @JsonProperty("shake_count")
         Integer shakeCount,
         @JsonProperty("good_segments")
-        List<GoodSegment> goodSegments
+        List<GoodSegment> goodSegments,
+        @JsonProperty("recording_url")
+        String recordingUrl
 ) {
 }

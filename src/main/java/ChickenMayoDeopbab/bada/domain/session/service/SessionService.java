@@ -68,14 +68,15 @@ public class SessionService {
             List<TranscriptTurn> transcript,
             Double silenceTotal,
             Integer shakeCount,
-            List<GoodSegment> goodSegments
+            List<GoodSegment> goodSegments,
+            String recordingUrl
     ) {
         SessionContext context = sessionRedisRepository.find(sessionId);
         if (context == null) {
             log.warn("종료 콜백 - 세션 없음(만료/미존재) sessionId={} reason={}", sessionId, reason);
             return;
         }
-        sessionRecordPort.record(sessionId, context, reason, transcript, silenceTotal, shakeCount, goodSegments);
+        sessionRecordPort.record(sessionId, context, reason, transcript, silenceTotal, shakeCount, goodSegments, recordingUrl);
         sessionRedisRepository.delete(sessionId);
     }
 
