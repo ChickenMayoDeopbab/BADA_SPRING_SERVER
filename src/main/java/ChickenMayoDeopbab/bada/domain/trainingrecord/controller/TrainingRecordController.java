@@ -35,7 +35,7 @@ public class TrainingRecordController {
     }
 
     @GetMapping("/feedback")
-    public FeedbackResponse getFeedback(@RequestParam("recordId") Long recordId) {
-        return trainingRecordService.getFeedback(recordId);
+    public FeedbackResponse getFeedback(@RequestParam("scenarioId") Long scenarioId) {
+        return trainingRecordService.getFeedback(scenarioId);
     }
 }

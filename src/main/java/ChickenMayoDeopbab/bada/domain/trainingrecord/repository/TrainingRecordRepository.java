@@ -15,4 +15,6 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
     Optional<TrainingRecord> findByRecordIdAndUser(Long recordId, Users user);
 
     Page<TrainingRecord> findByUserOrderByStartedAtDesc(Users user, Pageable pageable);
+
+    Optional<TrainingRecord> findFirstByScenarioIdAndUserOrderByEndedAtDesc(Long scenarioId, Users user);
 }

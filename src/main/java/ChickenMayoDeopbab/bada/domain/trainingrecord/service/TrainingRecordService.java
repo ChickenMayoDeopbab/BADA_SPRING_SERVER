@@ -54,9 +54,9 @@ public class TrainingRecordService {
         );
     }
 
-    public FeedbackResponse getFeedback(Long recordId) {
+    public FeedbackResponse getFeedback(Long scenarioId) {
         Users user = getUserInfo();
-        TrainingRecord trainingRecord = trainingRecordRepository.findByRecordIdAndUser(recordId, user)
+        TrainingRecord trainingRecord = trainingRecordRepository.findFirstByScenarioIdAndUserOrderByEndedAtDesc(scenarioId, user)
                 .orElseThrow(() -> new ApplicationException(TrainingRecordStatusCode.RECORD_NOT_FOUND));
 
         return FeedbackResponse.of(
