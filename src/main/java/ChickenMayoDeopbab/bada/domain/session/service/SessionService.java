@@ -11,6 +11,7 @@ import ChickenMayoDeopbab.bada.domain.session.model.TranscriptTurn;
 import ChickenMayoDeopbab.bada.domain.session.port.ScenarioPort;
 import ChickenMayoDeopbab.bada.domain.session.port.SessionRecordPort;
 import ChickenMayoDeopbab.bada.domain.session.repository.SessionRedisRepository;
+import ChickenMayoDeopbab.bada.domain.trainingrecord.repository.TrainingRecordRepository;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
 import ChickenMayoDeopbab.bada.domain.user.exception.UsersStatusCode;
 import ChickenMayoDeopbab.bada.domain.user.repository.UsersRepository;
@@ -35,6 +36,11 @@ public class SessionService {
     private final ScenarioPort scenarioPort;
     private final SessionRedisRepository sessionRedisRepository;
     private final SessionRecordPort sessionRecordPort;
+    private final TrainingRecordRepository trainingRecordRepository;
+
+    // 훈련 횟수로 안 치는 종료 사유
+    private static final List<EndReason> UNTRAINED_END_REASONS =
+            List.of(EndReason.ERROR, EndReason.NO_AUDIO);
 
     @Value("${app.ai.ws-base-url}")
     private String wsBaseUrl;
@@ -44,6 +50,9 @@ public class SessionService {
 
         ScenarioContext scenario = scenarioPort.fetch(request.scenarioId(), request.type());
 
+        long trainedCount = trainingRecordRepository.countByUserAndScenarioIdAndEndReasonNotIn(
+                user, request.scenarioId(), UNTRAINED_END_REASONS);
+
         SessionContext context = new SessionContext(
                 user.getUserId(),
                 request.scenarioId(),
@@ -51,7 +60,8 @@ public class SessionService {
                 request.aiPersonality(),
                 resolveMaxDuration(request),
                 LocalDateTime.now(),
-                scenario
+                scenario,
+                resolveScriptLevel(trainedCount)
         );
 
         String sessionId = UUID.randomUUID().toString();
@@ -83,6 +93,12 @@ public class SessionService {
     private Integer resolveMaxDuration(CreateSessionRequest request) {
         if (request.maxDurationSeconds() != null) return request.maxDurationSeconds();
         return request.type() == SessionType.WARMUP ? 30 : null;
+    }
+
+    static int resolveScriptLevel(long trainedCount) {
+        if (trainedCount <= 5) return 1;
+        if (trainedCount <= 10) return 2;
+        return 3;
     }
 
     private Users getUserInfo() {
