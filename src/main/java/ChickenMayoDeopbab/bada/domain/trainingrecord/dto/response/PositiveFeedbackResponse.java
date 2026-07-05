@@ -5,6 +5,7 @@ import ChickenMayoDeopbab.bada.domain.session.model.GoodSegment;
 public record PositiveFeedbackResponse(
         Double startSecond,
         Double endSecond,
+        String good_point,
         String summary,
         String audioUrl
 ) {
@@ -12,6 +13,7 @@ public record PositiveFeedbackResponse(
         return new PositiveFeedbackResponse(
                 segment.start(),
                 segment.end(),
+                segment.goodPoint(),
                 null,
                 null
         );
