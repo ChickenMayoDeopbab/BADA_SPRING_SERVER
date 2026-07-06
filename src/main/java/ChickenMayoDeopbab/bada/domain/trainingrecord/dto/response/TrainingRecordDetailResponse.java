@@ -23,6 +23,7 @@ public record TrainingRecordDetailResponse(
 ) {
     public static TrainingRecordDetailResponse of(
             TrainingRecord record,
+            String recordingUrl,
             List<TranscriptTurn> transcript,
             List<PositiveFeedbackResponse> positiveFeedbacks
     ) {
@@ -35,7 +36,7 @@ public record TrainingRecordDetailResponse(
                 record.getSessionType(),
                 record.getAiPersonality(),
                 record.getDurationSeconds(),
-                record.getRecordingUrl(),
+                recordingUrl,
                 transcript,
                 positiveFeedbacks
         );

@@ -1,5 +1,6 @@
 package ChickenMayoDeopbab.bada.domain.trainingrecord.service;
 
+import ChickenMayoDeopbab.bada.domain.file.service.FileService;
 import ChickenMayoDeopbab.bada.domain.session.model.GoodSegment;
 import ChickenMayoDeopbab.bada.domain.session.model.TranscriptTurn;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.FeedbackResponse;
@@ -33,6 +34,7 @@ public class TrainingRecordService {
     private final TrainingRecordRepository trainingRecordRepository;
     private final UsersRepository usersRepository;
     private final ObjectMapper objectMapper;
+    private final FileService fileService;
 
     public Page<TrainingRecordResponse> getTrainingRecords(Pageable pageable) {
         Users user = getUserInfo();
@@ -47,6 +49,7 @@ public class TrainingRecordService {
 
         return TrainingRecordDetailResponse.of(
                 record,
+                resolveRecordingUrl(record.getRecordingKey()),
                 parseTranscript(record.getTranscript()),
                 parseGoodSegments(record.getGoodSegments()).stream()
                         .map(PositiveFeedbackResponse::from)
@@ -61,8 +64,16 @@ public class TrainingRecordService {
 
         return FeedbackResponse.of(
                 trainingRecord,
-                parseGoodSegments(trainingRecord.getGoodSegments())
+                parseGoodSegments(trainingRecord.getGoodSegments()),
+                resolveRecordingUrl(trainingRecord.getRecordingKey())
         );
+    }
+
+    private String resolveRecordingUrl(String recordingKey) {
+        if (recordingKey == null || recordingKey.isBlank()) {
+            return null;
+        }
+        return fileService.generatePresignedUrl(recordingKey);
     }
 
     private Users getUserInfo() {

@@ -17,14 +17,14 @@ public record FeedbackResponse(
         List<GoodSegment> goodSegments,
         String recordingUrl
 ) {
-    public static FeedbackResponse of(TrainingRecord trainingRecord, List<GoodSegment> goodSegments) {
+    public static FeedbackResponse of(TrainingRecord trainingRecord, List<GoodSegment> goodSegments, String recordingUrl) {
         return new FeedbackResponse(
                 trainingRecord.getSessionType(),
                 trainingRecord.getScenarioName(),
                 LocalTime.ofSecondOfDay
                         (Duration.between(trainingRecord.getStartedAt(), trainingRecord.getEndedAt()).getSeconds()),
                 goodSegments,
-                trainingRecord.getRecordingUrl()
+                recordingUrl
         );
     }
 }

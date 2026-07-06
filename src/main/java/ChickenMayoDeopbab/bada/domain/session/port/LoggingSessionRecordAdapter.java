@@ -24,12 +24,12 @@ public class LoggingSessionRecordAdapter implements SessionRecordPort {
             Double silenceTotal,
             Integer shakeCount,
             List<GoodSegment> goodSegments,
-            String recordingUrl
+            String recordingKey
     ) {
         Long userId = context != null ? context.userId() : null;
         int turns = transcript != null ? transcript.size() : 0;
         int goodSegmentCount = goodSegments != null ? goodSegments.size() : 0;
         log.info("세션 종료 기록 수신 sessionId={} userId={} reason={} turns={} silenceTotal={} shakeCount={} goodSegments={} hasRecording={}",
-                sessionId, userId, reason, turns, silenceTotal, shakeCount, goodSegmentCount, recordingUrl != null);
+                sessionId, userId, reason, turns, silenceTotal, shakeCount, goodSegmentCount, recordingKey != null);
     }
 }

@@ -44,7 +44,7 @@ public class TrainingRecordSessionRecordAdapter implements SessionRecordPort {
             Double silenceTotal,
             Integer shakeCount,
             List<GoodSegment> goodSegments,
-            String recordingUrl
+            String recordingKey
     ) {
         if (trainingRecordRepository.existsBySessionId(sessionId)) {
             log.info("중복 세션 종료 기록 무시 sessionId={}", sessionId);
@@ -70,7 +70,7 @@ public class TrainingRecordSessionRecordAdapter implements SessionRecordPort {
                 .durationSeconds(Duration.between(startedAt, endedAt).toSeconds())
                 .transcript(toJson(transcript))
                 .goodSegments(toJson(goodSegments))
-                .recordingUrl(recordingUrl)
+                .recordingKey(recordingKey)
                 .build();
 
         trainingRecordRepository.save(record);
