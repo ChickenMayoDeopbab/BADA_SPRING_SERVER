@@ -9,13 +9,13 @@ public record PositiveFeedbackResponse(
         String summary,
         String audioUrl
 ) {
-    public static PositiveFeedbackResponse from(GoodSegment segment) {
+    public static PositiveFeedbackResponse from(GoodSegment segment, String audioUrl) {
         return new PositiveFeedbackResponse(
                 segment.start(),
                 segment.end(),
                 segment.goodPoint(),
                 null,
-                null
+                audioUrl
         );
     }
 }
