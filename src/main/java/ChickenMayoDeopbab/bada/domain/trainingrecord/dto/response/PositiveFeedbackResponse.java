@@ -15,7 +15,14 @@ public record PositiveFeedbackResponse(
                 segment.end(),
                 segment.goodPoint(),
                 null,
-                audioUrl
+                toSegmentUrl(audioUrl, segment)
         );
+    }
+
+    private static String toSegmentUrl(String audioUrl, GoodSegment segment) {
+        if (audioUrl == null || segment.start() == null || segment.end() == null) {
+            return audioUrl;
+        }
+        return audioUrl + "#t=" + segment.start() + "," + segment.end();
     }
 }
