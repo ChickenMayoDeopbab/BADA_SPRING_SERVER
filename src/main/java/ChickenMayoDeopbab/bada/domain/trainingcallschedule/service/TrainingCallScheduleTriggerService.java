@@ -28,6 +28,7 @@ public class TrainingCallScheduleTriggerService {
     private final JwtProvider jwtProvider;
 
     @Scheduled(fixedDelayString = "${app.training-call-schedule.trigger-fixed-delay-ms:30000}")
+    @Transactional
     public void triggerDueSchedules() {
         int triggeredCount = triggerDueSchedules(LocalDateTime.now());
         if (triggeredCount > 0) {
