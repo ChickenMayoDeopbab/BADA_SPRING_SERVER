@@ -1,6 +1,10 @@
 package ChickenMayoDeopbab.bada.domain.trainingcallschedule.service;
 
+import ChickenMayoDeopbab.bada.domain.session.dto.request.CreateSessionRequest;
+import ChickenMayoDeopbab.bada.domain.session.dto.response.CreateSessionResponse;
+import ChickenMayoDeopbab.bada.domain.session.service.SessionService;
 import ChickenMayoDeopbab.bada.domain.trainingcallschedule.dto.request.CreateTrainingCallScheduleRequest;
+import ChickenMayoDeopbab.bada.domain.trainingcallschedule.dto.response.AcceptTrainingCallScheduleResponse;
 import ChickenMayoDeopbab.bada.domain.trainingcallschedule.dto.response.TrainingCallScheduleResponse;
 import ChickenMayoDeopbab.bada.domain.trainingcallschedule.entity.TrainingCallSchedule;
 import ChickenMayoDeopbab.bada.domain.trainingcallschedule.entity.TrainingCallScheduleStatus;
@@ -25,6 +29,7 @@ public class TrainingCallScheduleService {
 
     private final UsersRepository usersRepository;
     private final TrainingCallScheduleRepository trainingCallScheduleRepository;
+    private final SessionService sessionService;
 
     @Transactional
     public TrainingCallScheduleResponse create(CreateTrainingCallScheduleRequest request) {
@@ -62,6 +67,31 @@ public class TrainingCallScheduleService {
             schedule.cancel();
         }
         return TrainingCallScheduleResponse.from(schedule);
+    }
+
+    @Transactional
+    public AcceptTrainingCallScheduleResponse accept(Long scheduleId, String accessToken) {
+        Users user = getUserInfo();
+        TrainingCallSchedule schedule = trainingCallScheduleRepository.findByScheduleIdAndUser(scheduleId, user)
+                .orElseThrow(() -> ApplicationException.of(TrainingCallScheduleStatusCode.SCHEDULE_NOT_FOUND));
+
+        if (schedule.getStatus() != TrainingCallScheduleStatus.RINGING) {
+            throw ApplicationException.of(TrainingCallScheduleStatusCode.SCHEDULE_NOT_ACCEPTABLE);
+        }
+
+        CreateSessionResponse session = sessionService.create(
+                new CreateSessionRequest(
+                        schedule.getScenarioId(),
+                        schedule.getType(),
+                        schedule.getAiPersonality(),
+                        null,
+                        schedule.getMaxDurationSeconds()
+                ),
+                accessToken
+        );
+
+        schedule.accept(session.sessionId(), LocalDateTime.now());
+        return AcceptTrainingCallScheduleResponse.of(schedule, session);
     }
 
     static void validateDelayRange(Integer minDelayMinutes, Integer maxDelayMinutes) {

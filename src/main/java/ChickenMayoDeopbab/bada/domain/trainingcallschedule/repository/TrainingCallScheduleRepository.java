@@ -13,6 +13,7 @@ import java.util.Optional;
 
 public interface TrainingCallScheduleRepository extends JpaRepository<TrainingCallSchedule, Long> {
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<TrainingCallSchedule> findByScheduleIdAndUser(Long scheduleId, Users user);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
