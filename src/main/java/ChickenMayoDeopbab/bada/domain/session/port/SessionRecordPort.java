@@ -18,6 +18,6 @@ public interface SessionRecordPort {
             Double silenceTotal,
             Integer shakeCount,
             List<GoodSegment> goodSegments,
-            String recordingUrl
+            String recordingKey
     );
 }

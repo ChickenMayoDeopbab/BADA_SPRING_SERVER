@@ -71,7 +71,7 @@ public class TrainingRecord {
     @Lob
     private String goodSegments;
 
-    private String recordingUrl;
+    private String recordingKey;
 
     @Builder
     private TrainingRecord(
@@ -87,7 +87,7 @@ public class TrainingRecord {
             Long durationSeconds,
             String transcript,
             String goodSegments,
-            String recordingUrl
+            String recordingKey
     ) {
         this.user = user;
         this.sessionId = sessionId;
@@ -101,6 +101,6 @@ public class TrainingRecord {
         this.durationSeconds = durationSeconds;
         this.transcript = transcript;
         this.goodSegments = goodSegments;
-        this.recordingUrl = recordingUrl;
+        this.recordingKey = recordingKey;
     }
 }

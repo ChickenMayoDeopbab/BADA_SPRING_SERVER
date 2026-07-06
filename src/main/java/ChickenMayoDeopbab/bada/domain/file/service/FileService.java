@@ -74,7 +74,7 @@ public class FileService {
         fileRepository.delete(file);
     }
 
-    private String generatePresignedUrl(String s3Key) {
+    public String generatePresignedUrl(String s3Key) {
         GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                 .bucket(bucket)
                 .key(s3Key)
