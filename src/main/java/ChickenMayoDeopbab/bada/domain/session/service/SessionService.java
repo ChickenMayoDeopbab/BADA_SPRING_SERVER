@@ -47,7 +47,10 @@ public class SessionService {
 
     public CreateSessionResponse create(CreateSessionRequest request, String accessToken) {
         Users user = getUserInfo();
+        return createForUser(user, request, accessToken);
+    }
 
+    public CreateSessionResponse createForUser(Users user, CreateSessionRequest request, String accessToken) {
         ScenarioContext scenario = scenarioPort.fetch(request.scenarioId(), request.type());
 
         long trainedCount = trainingRecordRepository.countByUserAndScenarioIdAndEndReasonNotIn(
