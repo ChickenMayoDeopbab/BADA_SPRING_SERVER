@@ -6,19 +6,21 @@ import ChickenMayoDeopbab.bada.domain.file.enumeration.FileType;
 import ChickenMayoDeopbab.bada.domain.file.exception.FileStatusCode;
 import ChickenMayoDeopbab.bada.domain.file.repository.FileRepository;
 import ChickenMayoDeopbab.bada.global.exception.ApplicationException;
-import com.amazonaws.HttpMethod;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
-import com.amazonaws.services.s3.model.ObjectMetadata;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.util.Date;
 import java.util.UUID;
 
 @Service
@@ -26,10 +28,11 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class FileService {
 
-    private final AmazonS3Client amazonS3Client;
+    private final S3Client s3Client;
+    private final S3Presigner s3Presigner;
     private final FileRepository fileRepository;
 
-    @Value("${spring.cloud.aws.s3.bucket}")
+    @Value("${aws.s3.bucket}")
     private String bucket;
 
     private static final Duration PRESIGNED_URL_EXPIRATION = Duration.ofMinutes(10);
@@ -64,28 +67,38 @@ public class FileService {
     public void delete(Long fileId) {
         File file = fileRepository.findById(fileId)
                 .orElseThrow(() -> ApplicationException.of(FileStatusCode.FILE_NOT_FOUND));
-        amazonS3Client.deleteObject(bucket, file.getS3Key());
+        s3Client.deleteObject(DeleteObjectRequest.builder()
+                .bucket(bucket)
+                .key(file.getS3Key())
+                .build());
         fileRepository.delete(file);
     }
 
     private String generatePresignedUrl(String s3Key) {
-        Date expiration = new Date(System.currentTimeMillis() + PRESIGNED_URL_EXPIRATION.toMillis());
+        GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                .bucket(bucket)
+                .key(s3Key)
+                .build();
 
-        GeneratePresignedUrlRequest request =
-                new GeneratePresignedUrlRequest(bucket, s3Key)
-                        .withMethod(HttpMethod.GET)
-                        .withExpiration(expiration);
+        GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
+                .signatureDuration(PRESIGNED_URL_EXPIRATION)
+                .getObjectRequest(getObjectRequest)
+                .build();
 
-        return amazonS3Client.generatePresignedUrl(request).toString();
+        return s3Presigner.presignGetObject(presignRequest).url().toString();
     }
 
     private void putObject(MultipartFile multipartFile, String s3Key) {
-        ObjectMetadata metadata = new ObjectMetadata();
-        metadata.setContentType(multipartFile.getContentType());
-        metadata.setContentLength(multipartFile.getSize());
+        PutObjectRequest request = PutObjectRequest.builder()
+                .bucket(bucket)
+                .key(s3Key)
+                .contentType(multipartFile.getContentType())
+                .contentLength(multipartFile.getSize())
+                .build();
 
         try {
-            amazonS3Client.putObject(bucket, s3Key, multipartFile.getInputStream(), metadata);
+            s3Client.putObject(request,
+                    RequestBody.fromInputStream(multipartFile.getInputStream(), multipartFile.getSize()));
         } catch (IOException e) {
             throw ApplicationException.of(FileStatusCode.FILE_UPLOAD_FAILED, e);
         }

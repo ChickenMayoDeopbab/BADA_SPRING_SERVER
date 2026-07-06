@@ -72,15 +72,10 @@ spring:
   openai:
     api-key: ${OPENAI-API-KEY}
 
-  cloud:
-    aws:
-      credentials:
-        access-key: ${AWS_ACCESS_KEY}
-        secret-key: ${AWS_SECRET_KEY}
-      region:
-        static: ap-northeast-2
-      s3:
-        bucket: ${BUCKET_NAME}
+aws:
+  region: ap-northeast-2
+  s3:
+    bucket: ${BUCKET_NAME}
 
 app:
   jwt:
