@@ -69,6 +69,15 @@ public class TrainingCallScheduleService {
         return TrainingCallScheduleResponse.from(schedule);
     }
 
+    @Transactional(readOnly = true)
+    public TrainingCallScheduleResponse getRinging() {
+        Users user = getUserInfo();
+        return trainingCallScheduleRepository
+                .findFirstByUserAndStatusOrderByTriggeredAtDesc(user, TrainingCallScheduleStatus.RINGING)
+                .map(TrainingCallScheduleResponse::from)
+                .orElse(null);
+    }
+
     @Transactional
     public AcceptTrainingCallScheduleResponse accept(Long scheduleId, String accessToken) {
         Users user = getUserInfo();
@@ -79,7 +88,22 @@ public class TrainingCallScheduleService {
             throw ApplicationException.of(TrainingCallScheduleStatusCode.SCHEDULE_NOT_ACCEPTABLE);
         }
 
-        CreateSessionResponse session = sessionService.create(
+        CreateSessionResponse session = resolveRingingSession(schedule, accessToken, user);
+
+        schedule.accept(session.sessionId(), session.wsUrl(), LocalDateTime.now());
+        return AcceptTrainingCallScheduleResponse.of(schedule, session);
+    }
+
+    private CreateSessionResponse resolveRingingSession(
+            TrainingCallSchedule schedule,
+            String accessToken,
+            Users user
+    ) {
+        if (schedule.getSessionId() != null && schedule.getWsUrl() != null) {
+            return new CreateSessionResponse(schedule.getSessionId(), schedule.getWsUrl());
+        }
+        return sessionService.createForUser(
+                user,
                 new CreateSessionRequest(
                         schedule.getScenarioId(),
                         schedule.getType(),
@@ -89,9 +113,6 @@ public class TrainingCallScheduleService {
                 ),
                 accessToken
         );
-
-        schedule.accept(session.sessionId(), LocalDateTime.now());
-        return AcceptTrainingCallScheduleResponse.of(schedule, session);
     }
 
     static void validateDelayRange(Integer minDelayMinutes, Integer maxDelayMinutes) {

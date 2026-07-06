@@ -16,6 +16,11 @@ public interface TrainingCallScheduleRepository extends JpaRepository<TrainingCa
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<TrainingCallSchedule> findByScheduleIdAndUser(Long scheduleId, Users user);
 
+    Optional<TrainingCallSchedule> findFirstByUserAndStatusOrderByTriggeredAtDesc(
+            Users user,
+            TrainingCallScheduleStatus status
+    );
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     List<TrainingCallSchedule> findTop100ByStatusAndScheduledAtLessThanEqualOrderByScheduledAtAsc(
             TrainingCallScheduleStatus status,

@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -40,6 +41,11 @@ public class TrainingCallScheduleController {
                 trainingCallScheduleService.cancel(scheduleId),
                 "AI 발신 예약이 취소되었습니다."
         );
+    }
+
+    @GetMapping("/ringing")
+    public ApiResponse<TrainingCallScheduleResponse> getRinging() {
+        return ApiResponse.ok(trainingCallScheduleService.getRinging());
     }
 
     @PostMapping("/{scheduleId}/accept")

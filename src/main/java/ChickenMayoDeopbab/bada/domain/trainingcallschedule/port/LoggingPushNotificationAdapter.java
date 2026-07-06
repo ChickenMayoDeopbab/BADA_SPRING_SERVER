@@ -11,10 +11,11 @@ public class LoggingPushNotificationAdapter implements PushNotificationPort {
     @Override
     public void notifyIncomingCall(TrainingCallSchedule schedule) {
         log.info(
-                "AI 발신 이벤트 생성 scheduleId={} userId={} scenarioId={} scheduledAt={}",
+                "AI 발신 이벤트 생성 scheduleId={} userId={} scenarioId={} sessionId={} scheduledAt={}",
                 schedule.getScheduleId(),
                 schedule.getUser().getUserId(),
                 schedule.getScenarioId(),
+                schedule.getSessionId(),
                 schedule.getScheduledAt()
         );
     }

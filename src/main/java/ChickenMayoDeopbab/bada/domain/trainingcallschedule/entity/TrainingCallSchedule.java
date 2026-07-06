@@ -70,6 +70,9 @@ public class TrainingCallSchedule {
 
     private String sessionId;
 
+    @Column(length = 1000)
+    private String wsUrl;
+
     @Builder
     private TrainingCallSchedule(
             Users user,
@@ -97,14 +100,17 @@ public class TrainingCallSchedule {
         return this.user != null && user != null && this.user.getUserId().equals(user.getUserId());
     }
 
-    public void markRinging(LocalDateTime triggeredAt) {
+    public void markRinging(LocalDateTime triggeredAt, String sessionId, String wsUrl) {
         this.status = TrainingCallScheduleStatus.RINGING;
         this.triggeredAt = triggeredAt;
+        this.sessionId = sessionId;
+        this.wsUrl = wsUrl;
     }
 
-    public void accept(String sessionId, LocalDateTime acceptedAt) {
+    public void accept(String sessionId, String wsUrl, LocalDateTime acceptedAt) {
         this.status = TrainingCallScheduleStatus.ACCEPTED;
         this.sessionId = sessionId;
+        this.wsUrl = wsUrl;
         this.acceptedAt = acceptedAt;
     }
 

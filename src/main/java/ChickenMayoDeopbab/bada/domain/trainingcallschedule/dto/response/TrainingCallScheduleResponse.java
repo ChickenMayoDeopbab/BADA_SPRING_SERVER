@@ -8,13 +8,17 @@ import java.time.LocalDateTime;
 public record TrainingCallScheduleResponse(
         Long scheduleId,
         LocalDateTime scheduledAt,
-        TrainingCallScheduleStatus status
+        TrainingCallScheduleStatus status,
+        String sessionId,
+        String wsUrl
 ) {
     public static TrainingCallScheduleResponse from(TrainingCallSchedule schedule) {
         return new TrainingCallScheduleResponse(
                 schedule.getScheduleId(),
                 schedule.getScheduledAt(),
-                schedule.getStatus()
+                schedule.getStatus(),
+                schedule.getSessionId(),
+                schedule.getWsUrl()
         );
     }
 }

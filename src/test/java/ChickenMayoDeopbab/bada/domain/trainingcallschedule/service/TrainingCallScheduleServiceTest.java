@@ -1,7 +1,5 @@
 package ChickenMayoDeopbab.bada.domain.trainingcallschedule.service;
 
-import ChickenMayoDeopbab.bada.domain.session.dto.request.CreateSessionRequest;
-import ChickenMayoDeopbab.bada.domain.session.dto.response.CreateSessionResponse;
 import ChickenMayoDeopbab.bada.domain.session.enums.AiPersonality;
 import ChickenMayoDeopbab.bada.domain.session.enums.SessionType;
 import ChickenMayoDeopbab.bada.domain.session.service.SessionService;
@@ -121,7 +119,7 @@ class TrainingCallScheduleServiceTest {
     void cancelRejectsAcceptedSchedule() {
         Users user = givenAuthenticatedUser();
         TrainingCallSchedule schedule = schedule(user);
-        schedule.accept("session-id", LocalDateTime.now());
+        schedule.accept("session-id", "ws://voice", LocalDateTime.now());
         when(trainingCallScheduleRepository.findByScheduleIdAndUser(1L, user)).thenReturn(Optional.of(schedule));
 
         assertThatThrownBy(() -> service.cancel(1L))
@@ -131,22 +129,15 @@ class TrainingCallScheduleServiceTest {
     }
 
     @Test
-    void acceptCreatesSessionAndMarksScheduleAccepted() {
+    void acceptReturnsStoredSessionAndMarksScheduleAccepted() {
         Users user = givenAuthenticatedUser();
         TrainingCallSchedule schedule = schedule(user);
-        schedule.markRinging(LocalDateTime.now());
+        schedule.markRinging(LocalDateTime.now(), "session-id", "ws://voice");
         when(trainingCallScheduleRepository.findByScheduleIdAndUser(1L, user)).thenReturn(Optional.of(schedule));
-        when(sessionService.create(any(CreateSessionRequest.class), eq("access-token")))
-                .thenReturn(new CreateSessionResponse("session-id", "ws://voice"));
 
         AcceptTrainingCallScheduleResponse response = service.accept(1L, "access-token");
 
-        ArgumentCaptor<CreateSessionRequest> captor = ArgumentCaptor.forClass(CreateSessionRequest.class);
-        verify(sessionService).create(captor.capture(), eq("access-token"));
-        CreateSessionRequest sessionRequest = captor.getValue();
-        assertThat(sessionRequest.scenarioId()).isEqualTo(3L);
-        assertThat(sessionRequest.type()).isEqualTo(SessionType.SCENARIO);
-        assertThat(sessionRequest.aiPersonality()).isEqualTo(AiPersonality.NORMAL);
+        verify(sessionService, never()).createForUser(any(), any(), any());
         assertThat(schedule.getStatus()).isEqualTo(TrainingCallScheduleStatus.ACCEPTED);
         assertThat(response.status()).isEqualTo(TrainingCallScheduleStatus.ACCEPTED);
         assertThat(response.sessionId()).isEqualTo("session-id");
@@ -163,7 +154,7 @@ class TrainingCallScheduleServiceTest {
                 .isInstanceOf(ApplicationException.class)
                 .extracting(ex -> ((ApplicationException) ex).getStatusCode())
                 .isEqualTo(TrainingCallScheduleStatusCode.SCHEDULE_NOT_ACCEPTABLE);
-        verify(sessionService, never()).create(any(), any());
+        verify(sessionService, never()).createForUser(any(), any(), any());
     }
 
     private Users givenAuthenticatedUser() {
