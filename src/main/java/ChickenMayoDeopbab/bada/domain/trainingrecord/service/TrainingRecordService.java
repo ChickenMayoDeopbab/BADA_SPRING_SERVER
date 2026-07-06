@@ -47,12 +47,13 @@ public class TrainingRecordService {
         TrainingRecord record = trainingRecordRepository.findByRecordIdAndUser(recordId, user)
                 .orElseThrow(() -> new ApplicationException(TrainingRecordStatusCode.RECORD_NOT_FOUND));
 
+        String recordingUrl = resolveRecordingUrl(record.getRecordingKey());
         return TrainingRecordDetailResponse.of(
                 record,
-                resolveRecordingUrl(record.getRecordingKey()),
+                recordingUrl,
                 parseTranscript(record.getTranscript()),
                 parseGoodSegments(record.getGoodSegments()).stream()
-                        .map(PositiveFeedbackResponse::from)
+                        .map(segment -> PositiveFeedbackResponse.from(segment, recordingUrl))
                         .toList()
         );
     }
