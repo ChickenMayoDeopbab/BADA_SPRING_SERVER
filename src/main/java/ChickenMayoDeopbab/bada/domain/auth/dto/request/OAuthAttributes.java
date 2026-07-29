@@ -44,6 +44,10 @@ public class OAuthAttributes {
                 .build();
     }
 
+    public String getProviderId() {
+        return String.valueOf(attributes.get(nameAttributeKey));
+    }
+
     public Users toEntity() {
         return Users.builder()
                 .username("USER_" + UUID.randomUUID().toString().substring(0, 8))
@@ -51,7 +55,7 @@ public class OAuthAttributes {
                 .name(name)
                 .profileImage(picture)
                 .provider(provider)
-                .providerId(String.valueOf(attributes.get(nameAttributeKey)))
+                .providerId(getProviderId())
                 .build();
     }
 

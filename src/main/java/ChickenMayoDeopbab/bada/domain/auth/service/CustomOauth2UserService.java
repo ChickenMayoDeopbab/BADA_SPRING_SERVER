@@ -46,8 +46,13 @@ public class CustomOauth2UserService implements OAuth2UserService<OAuth2UserRequ
     }
 
     private Users saveOrUpdate(OAuthAttributes attributes) {
-        return usersRepository.findByEmailAndProvider(attributes.getEmail(), attributes.getProvider())
-                .map(user -> usersRepository.save(user.update(attributes.getPicture())))
+        return usersRepository.findByProviderAndProviderId(attributes.getProvider(), attributes.getProviderId())
+                .map(user -> syncProfileImage(user, attributes.getPicture()))
                 .orElseGet(() -> usersRepository.save(attributes.toEntity()));
+    }
+
+    // 기존 회원의 프로필 이미지는 비어 있을 때만 채운다. 앱에서 직접 바꾼 이미지를 매 로그인마다 되돌리지 않기 위함이다.
+    private Users syncProfileImage(Users user, String picture) {
+        return user.applyProfileImageIfAbsent(picture) ? usersRepository.save(user) : user;
     }
 }
