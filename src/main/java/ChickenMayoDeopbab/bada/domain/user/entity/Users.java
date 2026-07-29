@@ -72,8 +72,14 @@ public class Users {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public Users update(String profileImage) {
+    public boolean applyProfileImageIfAbsent(String profileImage) {
+        if (profileImage == null || profileImage.isBlank()) {
+            return false;
+        }
+        if (this.profileImage != null && !this.profileImage.isBlank()) {
+            return false;
+        }
         this.profileImage = profileImage;
-        return this;
+        return true;
     }
 }

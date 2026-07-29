@@ -24,11 +24,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.util.UUID;
 
 @Service
 @Transactional(rollbackFor = Exception.class)
 @RequiredArgsConstructor
 public class AuthService {
+
+    private static final String OAUTH_CODE_PREFIX = "oauthCode: ";
+    private static final Duration OAUTH_CODE_TTL = Duration.ofSeconds(60);
+
     private final UsersRepository usersRepository;
     private final RedisTemplate<String, String> redisTemplate;
     private final JwtProvider jwtProvider;
@@ -71,6 +76,41 @@ public class AuthService {
         String newRefreshToken = generateRefreshToken(user.getUserId(), response);
 
         return new TokenResponse(accessToken, newRefreshToken);
+    }
+
+    /**
+     * 소셜 로그인 성공 직후 1회용 교환 코드를 발급한다.
+     * - 딥링크 URL에 토큰 대신 이 코드만 실어 앱으로 돌려보낸다.
+     * - Redis에 짧은 TTL로 저장하며, 교환 시 즉시 삭제되어 재사용할 수 없다.
+     */
+    public String issueOAuthCode(Long userId) {
+        String code = UUID.randomUUID().toString();
+
+        redisTemplate.opsForValue()
+                .set(OAUTH_CODE_PREFIX + code, String.valueOf(userId), OAUTH_CODE_TTL);
+
+        return code;
+    }
+
+    /**
+     * 1회용 교환 코드를 AccessToken/RefreshToken으로 교환한다.
+     * - 코드는 조회와 동시에 삭제되므로 두 번째 요청은 실패한다.
+     */
+    public TokenResponse exchangeOAuthCode(
+            String code,
+            HttpServletResponse response) {
+        String userId = redisTemplate.opsForValue().getAndDelete(OAUTH_CODE_PREFIX + code);
+
+        if (userId == null) {
+            throw new ApplicationException(AuthStatusCode.INVALID_OAUTH_CODE);
+        }
+
+        Users user = getUser(Long.valueOf(userId));
+
+        String accessToken = generateAccessToken(user.getUserId(), user.getRole(), response);
+        String refreshToken = generateRefreshToken(user.getUserId(), response);
+
+        return new TokenResponse(accessToken, refreshToken);
     }
 
     /**

@@ -1,67 +1,75 @@
 package ChickenMayoDeopbab.bada.domain.auth.handler;
 
-import ChickenMayoDeopbab.bada.domain.auth.dto.response.TokenResponse;
 import ChickenMayoDeopbab.bada.domain.auth.service.AuthService;
 import ChickenMayoDeopbab.bada.domain.user.entity.Provider;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
 import ChickenMayoDeopbab.bada.domain.user.exception.UsersStatusCode;
 import ChickenMayoDeopbab.bada.domain.user.repository.UsersRepository;
-import ChickenMayoDeopbab.bada.global.common.ApiResponse;
 import ChickenMayoDeopbab.bada.global.exception.ApplicationException;
-import ChickenMayoDeopbab.bada.global.jwt.JwtProvider;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.security.web.DefaultRedirectStrategy;
+import org.springframework.security.web.RedirectStrategy;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
-@Transactional(rollbackFor = Exception.class)
 public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
+
     private final AuthService authService;
     private final UsersRepository usersRepository;
-    private final ObjectMapper objectMapper;
+
+    private final RedirectStrategy redirectStrategy = new DefaultRedirectStrategy();
+
+    @Value("${app.oauth2.app-redirect-uri}")
+    private String appRedirectUri;
 
     @Override
     public void onAuthenticationSuccess(
             HttpServletRequest request,
             HttpServletResponse response,
-            Authentication authentication) throws IOException, ServletException {
+            Authentication authentication) throws IOException {
+        String code;
+        try {
+            code = issueCode(authentication);
+        } catch (Exception e) {
+            log.error("소셜 로그인 후처리에 실패했습니다.", e);
+            redirectStrategy.sendRedirect(request, response, buildRedirectUrl("error", "login_failed"));
+            return;
+        }
+
+        redirectStrategy.sendRedirect(request, response, buildRedirectUrl("code", code));
+    }
+
+    private String issueCode(Authentication authentication) {
+        // 이메일은 미제공(네이버 선택 동의 등)일 수 있으므로 provider 고유 식별자로 매칭한다.
         OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
-        String email = oAuth2User.getAttribute("email");
+        String providerId = oAuth2User.getName();
 
         OAuth2AuthenticationToken authToken = (OAuth2AuthenticationToken) authentication;
         Provider provider = Provider.valueOf(authToken.getAuthorizedClientRegistrationId().toUpperCase());
 
-        Users user = usersRepository.findByEmailAndProvider(email, provider)
+        Users user = usersRepository.findByProviderAndProviderId(provider, providerId)
                 .orElseThrow(() -> new ApplicationException(UsersStatusCode.USER_NOT_FOUND));
 
-        String accessToken = authService.generateAccessToken(user.getUserId(), user.getRole(), response);
-        String refreshToken = authService.generateRefreshToken(user.getUserId(), response);
-
-        TokenResponse res =  new TokenResponse(accessToken, refreshToken);
-
-        sendSuccessResponse(res, response);
+        return authService.issueOAuthCode(user.getUserId());
     }
 
-    private void sendSuccessResponse(
-            TokenResponse tokenResponse,
-            HttpServletResponse response) throws IOException {
-        ApiResponse<TokenResponse> res = ApiResponse.ok(tokenResponse, "로그인에 성공했습니다.");
-        response.setStatus(HttpServletResponse.SC_OK);
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-        response.getWriter().write(objectMapper.writeValueAsString(res));
+    private String buildRedirectUrl(String paramName, String paramValue) {
+        return UriComponentsBuilder.fromUriString(appRedirectUri)
+                .queryParam(paramName, paramValue)
+                .build()
+                .toUriString();
     }
-
-
 }

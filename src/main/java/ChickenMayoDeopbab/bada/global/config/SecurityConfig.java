@@ -1,16 +1,24 @@
 package ChickenMayoDeopbab.bada.global.config;
 
+import ChickenMayoDeopbab.bada.domain.auth.exception.AuthStatusCode;
+import ChickenMayoDeopbab.bada.domain.auth.handler.OAuth2LoginFailureHandler;
 import ChickenMayoDeopbab.bada.domain.auth.handler.OAuth2LoginSuccessHandler;
 import ChickenMayoDeopbab.bada.domain.auth.service.CustomOauth2UserService;
+import ChickenMayoDeopbab.bada.global.common.ApiResponse;
+import ChickenMayoDeopbab.bada.global.common.ErrorResponse;
 import ChickenMayoDeopbab.bada.global.jwt.JwtAuthenticationFilter;
 import ChickenMayoDeopbab.bada.global.jwt.JwtProvider;
 import ChickenMayoDeopbab.bada.global.jwt.MemberDetailsService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -19,6 +27,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.io.IOException;
 
 @Configuration
 @EnableWebSecurity
@@ -30,6 +40,7 @@ public class SecurityConfig {
     private final ObjectMapper objectMapper;
     private final CustomOauth2UserService customOauth2UserService;
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
+    private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
 
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
@@ -49,9 +60,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST,
                                 "/api/v1/auth/signup",
                                 "/api/v1/auth/login",
+                                "/api/v1/auth/refresh",
                                 "/api/v1/auth/email/send",
                                 "/api/v1/auth/email/check",
                                 "/api/v1/auth/check/username",
+                                "/api/v1/auth/oauth/token",
                                 "api/diagnosis/submit",
                                 "/api/v1/file"  // TODO(임시/테스트용): S3 업로드 확인용. 검증 후 제거.
                         ).permitAll()
@@ -76,13 +89,28 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
-                        .loginPage("/api/v1/auth/login")
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(customOauth2UserService))
                         .successHandler(oAuth2LoginSuccessHandler)
+                        .failureHandler(oAuth2LoginFailureHandler)
         )
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(this::writeUnauthorized))
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
         return http.build();
+    }
+
+    private void writeUnauthorized(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            AuthenticationException authException) throws IOException {
+        response.setStatus(HttpStatus.UNAUTHORIZED.value());
+        response.setContentType("application/json;charset=UTF-8");
+        ApiResponse<Void> body = ApiResponse.error(
+                HttpStatus.UNAUTHORIZED,
+                ErrorResponse.of(AuthStatusCode.UNAUTHENTICATED.getCode(), AuthStatusCode.UNAUTHENTICATED.getMessage())
+        );
+        response.getWriter().write(objectMapper.writeValueAsString(body));
     }
 
     @Bean

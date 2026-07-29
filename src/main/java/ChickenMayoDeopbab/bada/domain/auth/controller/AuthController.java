@@ -5,6 +5,7 @@ import ChickenMayoDeopbab.bada.domain.auth.dto.request.CheckUsernameRequest;
 import ChickenMayoDeopbab.bada.domain.auth.dto.request.EmailRequest;
 import ChickenMayoDeopbab.bada.domain.auth.dto.request.EmailVerificationRequest;
 import  ChickenMayoDeopbab.bada.domain.auth.dto.request.LoginRequest;
+import ChickenMayoDeopbab.bada.domain.auth.dto.request.OAuthCodeRequest;
 import ChickenMayoDeopbab.bada.domain.auth.dto.request.RefreshRequest;
 import ChickenMayoDeopbab.bada.domain.auth.dto.response.TokenResponse;
 import ChickenMayoDeopbab.bada.domain.auth.service.AuthService;
@@ -37,7 +38,7 @@ public class AuthController {
 
     // 자체 회원가입
     @PostMapping("/signup")
-    public ApiResponse<Void> signup(
+    public ApiResponse<Void> signup(    
             @Valid @RequestBody SignUpRequest request) {
         userService.signUp(request);
         return ApiResponse.ok("회원가입에 성공했습니다.");
@@ -91,6 +92,16 @@ public class AuthController {
     public void naverLogin(
             HttpServletResponse response) throws IOException {
         response.sendRedirect("/oauth2/authorization/naver");
+    }
+
+    // 소셜 로그인 1회용 코드 → 토큰 교환
+    @PostMapping("/oauth/token")
+    public ApiResponse<TokenResponse> exchangeOAuthCode(
+            @Valid @RequestBody OAuthCodeRequest request,
+            HttpServletResponse response) {
+        TokenResponse res = authService.exchangeOAuthCode(request.code(), response);
+
+        return ApiResponse.ok(res, "로그인에 성공했습니다.");
     }
 
     // 이메일 전송
