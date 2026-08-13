@@ -34,6 +34,14 @@ public class UserService {
         redisTemplate.delete(request.email());
     }
 
+    public void signOut() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Users user = usersRepository.findByUsername(auth.getName())
+                .orElseThrow(() -> new ApplicationException(UsersStatusCode.USER_NOT_FOUND));
+
+        usersRepository.delete(user);
+    }
+
     public ApiResponse<MyPageResponse> myPage() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Users user = usersRepository.findByUsername(auth.getName())

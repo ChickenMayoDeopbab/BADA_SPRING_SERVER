@@ -1,6 +1,7 @@
 package ChickenMayoDeopbab.bada.domain.file.entity;
 
 import ChickenMayoDeopbab.bada.domain.file.enumeration.FileType;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -18,13 +19,16 @@ import lombok.NoArgsConstructor;
 public class File {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "file_id")
     private Long id;
 
     private String title;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "file_type")
     private FileType fileType;
 
+    @Column(name = "s3_key")
     private String s3Key;
 
     @Builder
