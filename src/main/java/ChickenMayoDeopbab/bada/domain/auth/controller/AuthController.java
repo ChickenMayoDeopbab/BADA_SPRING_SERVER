@@ -135,8 +135,8 @@ public class AuthController {
 
     // 회원탈퇴
     @DeleteMapping("/withdraw")
-    public ApiResponse<Void> signout() {
-        userService.signOut();
+    public ApiResponse<Void> withdraw() {
+        userService.withdraw();
         return ApiResponse.ok("회원탈퇴에 성공했습니다.");
     }
 }
