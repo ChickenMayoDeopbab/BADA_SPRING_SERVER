@@ -74,6 +74,13 @@ public class FileService {
         fileRepository.delete(file);
     }
 
+    public void deleteByKey(String s3Key) {
+        s3Client.deleteObject(DeleteObjectRequest.builder()
+                .bucket(bucket)
+                .key(s3Key)
+                .build());
+    }
+
     public String generatePresignedUrl(String s3Key) {
         GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                 .bucket(bucket)
