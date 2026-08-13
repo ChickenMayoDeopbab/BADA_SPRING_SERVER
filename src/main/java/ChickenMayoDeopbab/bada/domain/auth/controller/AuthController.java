@@ -132,4 +132,11 @@ public class AuthController {
             @Valid @RequestBody EmailRequest request) {
         return authService.findId(request.email());
     }
+
+    // 회원탈퇴
+    @DeleteMapping("/withdraw")
+    public ApiResponse<Void> withdraw() {
+        userService.withdraw();
+        return ApiResponse.ok("회원탈퇴에 성공했습니다.");
+    }
 }
