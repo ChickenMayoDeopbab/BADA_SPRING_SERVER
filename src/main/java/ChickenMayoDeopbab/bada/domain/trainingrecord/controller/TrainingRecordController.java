@@ -8,6 +8,7 @@ import ChickenMayoDeopbab.bada.global.common.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -37,5 +38,11 @@ public class TrainingRecordController {
     @GetMapping("/feedback")
     public FeedbackResponse getFeedback(@RequestParam("scenarioId") Long scenarioId) {
         return trainingRecordService.getFeedback(scenarioId);
+    }
+
+    @DeleteMapping("/{recordId}")
+    public ApiResponse<Void> deleteTrainingRecord(@PathVariable Long recordId) {
+        trainingRecordService.deleteTrainingRecord(recordId);
+        return ApiResponse.ok("훈련 기록이 삭제되었습니다.");
     }
 }

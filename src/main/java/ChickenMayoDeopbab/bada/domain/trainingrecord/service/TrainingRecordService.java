@@ -9,6 +9,7 @@ import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.TrainingRecord
 import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.TrainingRecordResponse;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingRecord;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.exception.TrainingRecordStatusCode;
+import ChickenMayoDeopbab.bada.domain.trainingrecord.port.FeedbackCleanupPort;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.repository.TrainingRecordRepository;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
 import ChickenMayoDeopbab.bada.domain.user.exception.UsersStatusCode;
@@ -17,6 +18,7 @@ import ChickenMayoDeopbab.bada.global.exception.ApplicationException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
@@ -26,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -35,6 +38,7 @@ public class TrainingRecordService {
     private final UsersRepository usersRepository;
     private final ObjectMapper objectMapper;
     private final FileService fileService;
+    private final FeedbackCleanupPort feedbackCleanupPort;
 
     public Page<TrainingRecordResponse> getTrainingRecords(Pageable pageable) {
         Users user = getUserInfo();
@@ -68,6 +72,37 @@ public class TrainingRecordService {
                 parseGoodSegments(trainingRecord.getGoodSegments()),
                 resolveRecordingUrl(trainingRecord.getRecordingKey())
         );
+    }
+
+    @Transactional
+    public void deleteTrainingRecord(Long recordId) {
+        Users user = getUserInfo();
+        TrainingRecord record = trainingRecordRepository.findByRecordIdAndUser(recordId, user)
+                .orElseThrow(() -> new ApplicationException(TrainingRecordStatusCode.RECORD_NOT_FOUND));
+
+        deleteRecordingQuietly(record.getRecordingKey());
+        deleteFeedbackQuietly(record.getSessionId());
+
+        trainingRecordRepository.delete(record);
+    }
+
+    private void deleteRecordingQuietly(String recordingKey) {
+        if (recordingKey == null || recordingKey.isBlank()) {
+            return;
+        }
+        try {
+            fileService.deleteByKey(recordingKey);
+        } catch (Exception e) {
+            log.warn("녹음 파일 삭제 실패, 기록 삭제는 계속 진행 recordingKey={}", recordingKey, e);
+        }
+    }
+
+    private void deleteFeedbackQuietly(String sessionId) {
+        try {
+            feedbackCleanupPort.deleteBySessionId(sessionId);
+        } catch (Exception e) {
+            log.warn("AI 피드백 정리 실패, 기록 삭제는 계속 진행 sessionId={}", sessionId, e);
+        }
     }
 
     private String resolveRecordingUrl(String recordingKey) {
