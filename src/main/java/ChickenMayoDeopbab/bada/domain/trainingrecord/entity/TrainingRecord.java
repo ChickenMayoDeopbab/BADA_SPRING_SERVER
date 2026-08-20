@@ -73,6 +73,8 @@ public class TrainingRecord {
 
     private String recordingKey;
 
+    private Short anxietyScore;
+
     @Builder
     private TrainingRecord(
             Users user,
@@ -102,5 +104,9 @@ public class TrainingRecord {
         this.transcript = transcript;
         this.goodSegments = goodSegments;
         this.recordingKey = recordingKey;
+    }
+
+    public void recordAnxietyScore(Short score) {
+        this.anxietyScore = score;
     }
 }

@@ -1,19 +1,17 @@
 package ChickenMayoDeopbab.bada.domain.trainingrecord.controller;
 
+import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.request.RecordAnxietyScoreRequest;
+import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.AnxietyScoreResponse;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.FeedbackResponse;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.TrainingRecordDetailResponse;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.TrainingRecordResponse;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.service.TrainingRecordService;
 import ChickenMayoDeopbab.bada.global.common.ApiResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/training-records")
@@ -21,6 +19,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class TrainingRecordController {
 
     private final TrainingRecordService trainingRecordService;
+    @PostMapping("/{sessionId}/anxiety-score")
+    public ApiResponse<AnxietyScoreResponse> recordAnxietyScore(@PathVariable String sessionId,
+                                                                @Valid @RequestBody RecordAnxietyScoreRequest request) {
+        return ApiResponse.created(trainingRecordService.recordAnxietyScore(sessionId, request.score()), "불안 점수가 기록되었습니다.");
+    }
 
     @GetMapping
     public ApiResponse<Page<TrainingRecordResponse>> getTrainingRecords(

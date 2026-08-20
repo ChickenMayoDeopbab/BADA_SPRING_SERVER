@@ -1,12 +1,11 @@
 package ChickenMayoDeopbab.bada.domain.trainingrecord.service;
 
 import ChickenMayoDeopbab.bada.domain.file.service.FileService;
+import ChickenMayoDeopbab.bada.domain.session.enums.EndReason;
+import ChickenMayoDeopbab.bada.domain.session.enums.SessionType;
 import ChickenMayoDeopbab.bada.domain.session.model.GoodSegment;
 import ChickenMayoDeopbab.bada.domain.session.model.TranscriptTurn;
-import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.FeedbackResponse;
-import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.PositiveFeedbackResponse;
-import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.TrainingRecordDetailResponse;
-import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.TrainingRecordResponse;
+import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.*;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingRecord;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.exception.TrainingRecordStatusCode;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.port.FeedbackCleanupPort;
@@ -27,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -39,6 +39,9 @@ public class TrainingRecordService {
     private final ObjectMapper objectMapper;
     private final FileService fileService;
     private final FeedbackCleanupPort feedbackCleanupPort;
+
+    private static final Set<EndReason> ANXIETY_SCORE_EXCLUDED_END_REASONS =
+            Set.of(EndReason.ERROR, EndReason.NO_AUDIO);
 
     public Page<TrainingRecordResponse> getTrainingRecords(Pageable pageable) {
         Users user = getUserInfo();
@@ -84,6 +87,36 @@ public class TrainingRecordService {
         deleteFeedbackQuietly(record.getSessionId());
 
         trainingRecordRepository.delete(record);
+    }
+
+    @Transactional
+    public AnxietyScoreResponse recordAnxietyScore(String sessionId, Short score) {
+        Users user = getUserInfo();
+        TrainingRecord record = trainingRecordRepository.findBySessionIdAndUser(sessionId, user)
+                .orElseThrow(() -> new ApplicationException(TrainingRecordStatusCode.RECORD_NOT_FOUND));
+        Boolean isScenarioTraining =
+                record.getSessionType() == SessionType.SCENARIO;
+
+        boolean isExcludedEndReason =
+                ANXIETY_SCORE_EXCLUDED_END_REASONS.contains(
+                        record.getEndReason()
+                );
+
+        if (!isScenarioTraining || isExcludedEndReason) {
+            throw new ApplicationException(
+                    TrainingRecordStatusCode.ANXIETY_SCORE_NOT_ALLOWED
+            );
+        }
+
+        if (record.getAnxietyScore() != null) {
+            throw new ApplicationException(
+                    TrainingRecordStatusCode.ANXIETY_SCORE_ALREADY_RECORDED
+            );
+        }
+
+        record.recordAnxietyScore(score);
+
+        return AnxietyScoreResponse.from(record);
     }
 
     private void deleteRecordingQuietly(String recordingKey) {
