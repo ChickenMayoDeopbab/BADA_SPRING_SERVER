@@ -25,7 +25,6 @@ public class FileController {
         return ApiResponse.ok(new GetUrlResponse(url));
     }
 
-    // TODO(임시/테스트용): S3 IAM Role 업로드 확인용. 검증 후 제거.
     @PostMapping
     public ApiResponse<FileUploadResponse> upload(
             @RequestParam("file") MultipartFile file,
