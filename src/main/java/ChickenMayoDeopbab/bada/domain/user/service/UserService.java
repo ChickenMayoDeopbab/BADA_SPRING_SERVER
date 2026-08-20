@@ -1,6 +1,7 @@
 package ChickenMayoDeopbab.bada.domain.user.service;
 
 import ChickenMayoDeopbab.bada.domain.user.dto.request.SignUpRequest;
+import ChickenMayoDeopbab.bada.domain.user.dto.request.UpdateMyPageRequest;
 import ChickenMayoDeopbab.bada.domain.user.dto.response.MyPageResponse;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
 import ChickenMayoDeopbab.bada.domain.user.exception.UsersStatusCode;
@@ -43,11 +44,16 @@ public class UserService {
     }
 
     public ApiResponse<MyPageResponse> myPage() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Users user = usersRepository.findByUsername(auth.getName())
-                .orElseThrow(() -> new ApplicationException(UsersStatusCode.USER_NOT_FOUND));
+        Users user = getUserInfo();
 
         return ApiResponse.ok(MyPageResponse.of(user.getUsername(), user.getEmail()));
+    }
+
+    public ApiResponse<Void> updateMyPage(UpdateMyPageRequest request) {
+        Users user = getUserInfo();
+
+        user.update(request.name(), request.username(), request.s3Key());
+        return ApiResponse.ok("프로필이 업데이트되었습니다.");
     }
 
     //  아이디 검증 및 이메일인 중복 검사
@@ -67,5 +73,11 @@ public class UserService {
         if (!"ACCESS".equals(status)) {
             throw new ApplicationException(UsersStatusCode.EMAIL_NOT_VERIFIED);
         }
+    }
+
+    private Users getUserInfo() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return usersRepository.findByUsername(auth.getName())
+                .orElseThrow(() -> new ApplicationException(UsersStatusCode.USER_NOT_FOUND));
     }
 }

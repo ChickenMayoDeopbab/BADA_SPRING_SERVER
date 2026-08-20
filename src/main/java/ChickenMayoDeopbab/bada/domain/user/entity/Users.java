@@ -35,7 +35,7 @@ public class Users {
     @Column(nullable = false)
     private String email;
 
-    private String profileImage = "https://dasjkdj.s3.ap-northeast-2.amazonaws.com/default_profile.png";
+    private String profileImage;
 
     @Column(columnDefinition = "integer default 0")
     private int totalTrainingCount = 0;
@@ -81,5 +81,11 @@ public class Users {
         }
         this.profileImage = profileImage;
         return true;
+    }
+
+    public void update(String name, String username, String s3Key) {
+        this.name = name;
+        this.username = username;
+        this.profileImage = s3Key;
     }
 }
