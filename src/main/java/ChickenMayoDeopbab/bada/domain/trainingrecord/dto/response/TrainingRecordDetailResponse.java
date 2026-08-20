@@ -18,6 +18,7 @@ public record TrainingRecordDetailResponse(
         AiPersonality aiPersonality,
         Long durationSeconds,
         String recordingUrl,
+        Short anxietyScore,
         List<TranscriptTurn> transcript,
         List<PositiveFeedbackResponse> positiveFeedbacks
 ) {
@@ -37,6 +38,7 @@ public record TrainingRecordDetailResponse(
                 record.getAiPersonality(),
                 record.getDurationSeconds(),
                 recordingUrl,
+                record.getAnxietyScore(),
                 transcript,
                 positiveFeedbacks
         );

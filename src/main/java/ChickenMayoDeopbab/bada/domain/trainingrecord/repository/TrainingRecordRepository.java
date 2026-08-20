@@ -3,9 +3,11 @@ package ChickenMayoDeopbab.bada.domain.trainingrecord.repository;
 import ChickenMayoDeopbab.bada.domain.session.enums.EndReason;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingRecord;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 
 import java.util.Collection;
 import java.util.Optional;
@@ -21,4 +23,7 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
     Optional<TrainingRecord> findFirstByScenarioIdAndUserOrderByEndedAtDesc(Long scenarioId, Users user);
 
     long countByUserAndScenarioIdAndEndReasonNotIn(Users user, Long scenarioId, Collection<EndReason> endReasons);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<TrainingRecord> findBySessionIdAndUser(String sessionId, Users user);
 }
