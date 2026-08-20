@@ -5,7 +5,7 @@ import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingRecord;
 public record AnxietyScoreResponse(
         Long recordId,
         String sessionId,
-        Short AnxietyScore
+        Short anxietyScore
 ) {
     public static AnxietyScoreResponse from(TrainingRecord record) {
         return new AnxietyScoreResponse(
