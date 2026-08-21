@@ -19,13 +19,13 @@ import org.springframework.web.multipart.MultipartFile;
 public class FileController {
     private final FileService fileService;
 
-    @GetMapping
+    @PostMapping
     public ApiResponse<GetUrlResponse> getPresignedUrl(@RequestParam("fileId") Long fileId) {
         String url = fileService.getUrl(fileId);
         return ApiResponse.ok(new GetUrlResponse(url));
     }
 
-    @PostMapping
+    @PostMapping("/upload")
     public ApiResponse<FileUploadResponse> upload(
             @RequestParam("file") MultipartFile file,
             @RequestParam("fileType") FileType fileType) {
