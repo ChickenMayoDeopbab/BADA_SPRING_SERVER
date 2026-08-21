@@ -46,7 +46,7 @@ public class UserService {
     public ApiResponse<MyPageResponse> myPage() {
         Users user = getUserInfo();
 
-        return ApiResponse.ok(MyPageResponse.of(user.getUsername(), user.getEmail()));
+        return ApiResponse.ok(MyPageResponse.of(user.getUsername(), user.getEmail(), user.getProfileImage()));
     }
 
     public ApiResponse<Void> updateMyPage(UpdateMyPageRequest request) {
