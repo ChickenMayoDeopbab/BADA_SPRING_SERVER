@@ -1,5 +1,10 @@
 package ChickenMayoDeopbab.bada.domain.user.service;
 
+import ChickenMayoDeopbab.bada.domain.attendance.repository.AttendanceQueryRepository;
+import ChickenMayoDeopbab.bada.domain.diagnosis.entity.DiagnosisResult;
+import ChickenMayoDeopbab.bada.domain.diagnosis.exception.DiagnosisResultStatusCode;
+import ChickenMayoDeopbab.bada.domain.diagnosis.repository.DiagnosisResultRepository;
+import ChickenMayoDeopbab.bada.domain.trainingrecord.repository.TrainingRecordRepository;
 import ChickenMayoDeopbab.bada.domain.user.dto.request.SignUpRequest;
 import ChickenMayoDeopbab.bada.domain.user.dto.request.UpdateMyPageRequest;
 import ChickenMayoDeopbab.bada.domain.user.dto.response.MyPageResponse;
@@ -16,13 +21,14 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-
 @Service
 @RequiredArgsConstructor
 @Transactional(rollbackFor = Exception.class)
 public class UserService {
     private final UsersRepository usersRepository;
+    private final DiagnosisResultRepository diagnosisResultRepository;
+    private final AttendanceQueryRepository attendanceQueryRepository;
+    private final TrainingRecordRepository trainingRecordRepository;
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
     private final RedisTemplate<String, String> redisTemplate;
 
@@ -45,8 +51,12 @@ public class UserService {
 
     public ApiResponse<MyPageResponse> myPage() {
         Users user = getUserInfo();
+        DiagnosisResult diagnosisResult = diagnosisResultRepository.findByUser(user)
+                .orElseThrow(() -> new ApplicationException(DiagnosisResultStatusCode.DIAGNOSIS_RESULT_NOT_FOUND));
+        int totalTraining = trainingRecordRepository.countByUser(user);
+        int attendanceCount = attendanceQueryRepository.getTotalAttendance(user);
 
-        return ApiResponse.ok(MyPageResponse.of(user.getUsername(), user.getEmail(), user.getProfileImage()));
+        return ApiResponse.ok(MyPageResponse.of(user, diagnosisResult, totalTraining, attendanceCount));
     }
 
     public ApiResponse<Void> updateMyPage(UpdateMyPageRequest request) {

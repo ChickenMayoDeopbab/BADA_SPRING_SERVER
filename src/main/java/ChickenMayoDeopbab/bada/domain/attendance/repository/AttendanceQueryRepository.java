@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface AttendanceQueryRepository {
     List<Attendance> getAttendanceByYearAndMonth(int year, int month, Users user);
+    Integer getTotalAttendance(Users user);
 }

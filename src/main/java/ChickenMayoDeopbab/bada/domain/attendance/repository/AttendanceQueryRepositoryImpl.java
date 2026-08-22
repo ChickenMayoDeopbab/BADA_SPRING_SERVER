@@ -15,6 +15,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AttendanceQueryRepositoryImpl implements AttendanceQueryRepository {
     private final JPAQueryFactory queryFactory;
+
     @Override
     public List<Attendance> getAttendanceByYearAndMonth(int year, int month, Users userInfo) {
         LocalDate start = LocalDate.of(year, month, 1);
@@ -25,5 +26,19 @@ public class AttendanceQueryRepositoryImpl implements AttendanceQueryRepository 
                 .where(attendance.attendedDate.between(start,end))
                 .orderBy(attendance.attendedDate.asc())
                 .fetch();
+    }
+
+    @Override
+    public Integer getTotalAttendance(Users userInfo) {
+        LocalDate start = LocalDate.now().withDayOfMonth(1);
+        LocalDate end = start.plusMonths(1).minusDays(1);
+
+        Long total = queryFactory.select(attendance.count())
+                .from(attendance)
+                .where(attendance.user.eq(userInfo))
+                .where(attendance.attendedDate.between(start,end))
+                .fetchOne();
+
+        return total == null ? 0 : total.intValue();
     }
 }
