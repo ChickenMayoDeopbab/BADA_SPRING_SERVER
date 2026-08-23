@@ -26,4 +26,6 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<TrainingRecord> findBySessionIdAndUser(String sessionId, Users user);
+
+    int countByUser(Users user);
 }
