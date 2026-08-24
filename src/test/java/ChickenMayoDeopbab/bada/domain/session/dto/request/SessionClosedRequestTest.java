@@ -52,7 +52,7 @@ class SessionClosedRequestTest {
                     "completed_script_steps": 3,
                     "script_step_count": 4,
                     "analysis_quality_status": "PASS",
-                    "score_exclusion_reason": null,
+                    "analysis_exclusion_reason": null,
                     "analyzer_version": "VOICE_METRICS_V1",
                     "analysis_policy_version": "ANALYSIS_POLICY_V1"
                   }
