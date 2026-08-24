@@ -101,16 +101,16 @@ public class TrainingRecordService {
         TrainingRecord record = trainingRecordRepository.findByRecordIdAndUser(recordId, user)
                 .orElseThrow(() -> new ApplicationException(TrainingRecordStatusCode.RECORD_NOT_FOUND));
 
-        deleteRecordingQuietly(record.getRecordingKey());
-        deleteFeedbackQuietly(record.getSessionId());
-
         if (record.isScoreApplied()) {
             throw new ApplicationException(
                     TrainingRecordStatusCode
                             .SCORE_APPLIED_RECORD_CANNOT_BE_DELETED
             );
         }
-        
+
+        deleteRecordingQuietly(record.getRecordingKey());
+        deleteFeedbackQuietly(record.getSessionId());
+
         trainingRecordRepository.delete(record);
     }
 
