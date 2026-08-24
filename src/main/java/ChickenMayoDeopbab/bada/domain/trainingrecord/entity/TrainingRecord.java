@@ -1,22 +1,11 @@
 package ChickenMayoDeopbab.bada.domain.trainingrecord.entity;
 
+import ChickenMayoDeopbab.bada.domain.callanxiety.model.CallAnxietyCalculation;
 import ChickenMayoDeopbab.bada.domain.session.enums.AiPersonality;
 import ChickenMayoDeopbab.bada.domain.session.enums.EndReason;
 import ChickenMayoDeopbab.bada.domain.session.enums.SessionType;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
-import jakarta.persistence.Column;
-import jakarta.persistence.Embedded;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -28,7 +17,22 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "training_records")
+@Table(
+        name = "training_records",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_training_record_session",
+                        columnNames = "session_id"
+                ),
+                @UniqueConstraint(
+                        name = "uk_training_record_user_score_sequence",
+                        columnNames = {
+                                "user_id",
+                                "score_sequence"
+                        }
+                )
+        }
+)
 public class TrainingRecord {
 
     @Id
@@ -39,7 +43,7 @@ public class TrainingRecord {
     @JoinColumn(name = "user_id", nullable = false)
     private Users user;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String sessionId;
 
     private Long scenarioId;
@@ -152,5 +156,70 @@ public class TrainingRecord {
 
     public void recordAnxietyScore(Short score) {
         this.anxietyScore = score;
+    }
+
+
+    public boolean hasSameAnxietyScore(Short anxietyScore) {
+        return this.anxietyScore != null
+                && this.anxietyScore.equals(anxietyScore);
+    }
+
+    public boolean isScoreProcessed() {
+        return Boolean.TRUE.equals(scoreApplied)
+                || (
+                scoreExclusionReason != null
+                        && !scoreExclusionReason.isBlank()
+        );
+    }
+
+    public boolean isScoreApplied() {
+        return Boolean.TRUE.equals(scoreApplied);
+    }
+
+    public void applyScore(
+            Short anxietyScore,
+            CallAnxietyCalculation calculation,
+            BigDecimal scoreBefore,
+            long scoreSequence,
+            String scoringVersion,
+            LocalDateTime appliedAt
+    ) {
+        this.anxietyScore = anxietyScore;
+
+        this.performanceScore =
+                calculation.performanceScore();
+
+        this.performanceRiskScore =
+                calculation.performanceRiskScore();
+
+        this.subjectiveAnxietyScore =
+                calculation.subjectiveAnxietyScore();
+
+        this.trainingStateIndex =
+                calculation.trainingStateIndex();
+
+        this.scoreBefore = scoreBefore;
+
+        this.scoreAfter =
+                calculation.newCurrentCallAnxietyIndex();
+
+        this.scoreApplied = true;
+        this.scoreAppliedAt = appliedAt;
+        this.scoreExclusionReason = null;
+        this.scoreSequence = scoreSequence;
+        this.scoringVersion = scoringVersion;
+    }
+
+    public void excludeScore(
+            Short anxietyScore,
+            String exclusionReason,
+            String scoringVersion
+    ) {
+        this.anxietyScore = anxietyScore;
+        this.scoreApplied = false;
+        this.scoreAppliedAt = null;
+        this.scoreExclusionReason = exclusionReason;
+        this.scoreSequence = null;
+        this.scoringVersion = scoringVersion;
     }
 }

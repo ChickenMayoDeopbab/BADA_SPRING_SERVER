@@ -92,4 +92,31 @@ public class TrainingAnalysisMetrics {
         return analysisQualityStatus == AnalysisQualityStatus.PASS;
     }
 
+    public boolean hasObjectiveScores() {
+        return stabilityScore != null
+                && conversationScore != null
+                && fluencyScore != null;
+    }
+
+    public boolean hasValidObjectiveScores() {
+        return isScoreInRange(stabilityScore)
+                && isScoreInRange(conversationScore)
+                && isScoreInRange(fluencyScore);
+    }
+
+    public boolean hasVersions() {
+        return analyzerVersion != null
+                && !analyzerVersion.isBlank()
+                && analysisPolicyVersion != null
+                && !analysisPolicyVersion.isBlank();
+    }
+
+    private boolean isScoreInRange(BigDecimal score) {
+        if (score == null) {
+            return false;
+        }
+
+        return score.compareTo(BigDecimal.ZERO) >= 0
+                && score.compareTo(new BigDecimal("100")) <= 0;
+    }
 }
