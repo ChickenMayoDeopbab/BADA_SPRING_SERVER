@@ -23,6 +23,12 @@ import java.time.LocalDateTime;
 )
 @NoArgsConstructor
 public class CallAnxietyState {
+    private static final BigDecimal MIN_INDEX =
+            new BigDecimal("1.0");
+
+    private static final BigDecimal MAX_INDEX =
+            new BigDecimal("5.0");
+
     public static final String SELF_ASSESSMENT_VERSION =
             "SELF_ASSESSMENT_V1";
 
@@ -113,6 +119,14 @@ public class CallAnxietyState {
         if (initialSelfReportScore == null) {
             throw new IllegalArgumentException(
                     "initialSelfReportScore는 null일 수 없습니다."
+            );
+        }
+        if (
+                initialSelfReportScore.compareTo(MIN_INDEX) < 0
+                        || initialSelfReportScore.compareTo(MAX_INDEX) > 0
+        ) {
+            throw new IllegalArgumentException(
+                    "initialSelfReportScore는 1~5 범위여야 합니다."
             );
         }
         if (initialLevel == null) {
