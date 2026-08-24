@@ -1,5 +1,7 @@
 package ChickenMayoDeopbab.bada.domain.trainingrecord.service;
 
+import ChickenMayoDeopbab.bada.domain.callanxiety.repository.CallAnxietyStateRepository;
+import ChickenMayoDeopbab.bada.domain.callanxiety.service.CallAnxietyScoreCalculator;
 import ChickenMayoDeopbab.bada.domain.file.service.FileService;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingRecord;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.exception.TrainingRecordStatusCode;
@@ -31,12 +33,16 @@ class TrainingRecordServiceTest {
     private final UsersRepository usersRepository = mock(UsersRepository.class);
     private final FileService fileService = mock(FileService.class);
     private final FeedbackCleanupPort feedbackCleanupPort = mock(FeedbackCleanupPort.class);
+    private final CallAnxietyStateRepository callAnxietyStateRepository =
+            mock(CallAnxietyStateRepository.class);
     private final TrainingRecordService service = new TrainingRecordService(
             trainingRecordRepository,
             usersRepository,
             new ObjectMapper(),
             fileService,
-            feedbackCleanupPort
+            feedbackCleanupPort,
+            callAnxietyStateRepository,
+            new CallAnxietyScoreCalculator()
     );
 
     private final Users user = mock(Users.class);
