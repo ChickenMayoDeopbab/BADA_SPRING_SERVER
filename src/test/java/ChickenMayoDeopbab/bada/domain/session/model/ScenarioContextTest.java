@@ -66,7 +66,8 @@ class ScenarioContextTest {
                 "병원 접수 직원",
                 "You are a hospital receptionist handling appointment changes.",
                 java.util.List.of(new ScriptTurn(1, "병원 이름을 밝히고 용건을 확인한다", "예약 변경을 말하세요")),
-                "v-abc"
+                "v-abc",
+                null
         );
 
         String json = objectMapper.writeValueAsString(context);

@@ -5,6 +5,7 @@ import ChickenMayoDeopbab.bada.domain.session.enums.EndReason;
 import ChickenMayoDeopbab.bada.domain.session.enums.SessionType;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
 import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -21,6 +22,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -44,6 +46,13 @@ public class TrainingRecord {
 
     @Column(nullable = false)
     private String scenarioName;
+
+    private String scenarioVersion;
+
+    private String difficulty;
+
+    @Embedded
+    private TrainingAnalysisMetrics analysis;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -75,12 +84,43 @@ public class TrainingRecord {
 
     private Short anxietyScore;
 
+    @Column(precision = 6, scale = 4)
+    private BigDecimal performanceScore;
+
+    @Column(precision = 6, scale = 4)
+    private BigDecimal performanceRiskScore;
+
+    @Column(precision = 6, scale = 4)
+    private BigDecimal subjectiveAnxietyScore;
+
+    @Column(precision = 6, scale = 4)
+    private BigDecimal trainingStateIndex;
+
+    @Column(precision = 6, scale = 4)
+    private BigDecimal scoreBefore;
+
+    @Column(precision = 6, scale = 4)
+    private BigDecimal scoreAfter;
+
+    private Boolean scoreApplied;
+
+    private LocalDateTime scoreAppliedAt;
+
+    private String scoreExclusionReason;
+
+    private Long scoreSequence;
+
+    private String scoringVersion;
+
     @Builder
     private TrainingRecord(
             Users user,
             String sessionId,
             Long scenarioId,
             String scenarioName,
+            String scenarioVersion,
+            String difficulty,
+            TrainingAnalysisMetrics analysis,
             SessionType sessionType,
             AiPersonality aiPersonality,
             EndReason endReason,
@@ -95,6 +135,10 @@ public class TrainingRecord {
         this.sessionId = sessionId;
         this.scenarioId = scenarioId;
         this.scenarioName = scenarioName;
+        this.scenarioVersion = scenarioVersion;
+        this.difficulty = difficulty;
+        this.analysis = analysis;
+        this.scoreApplied = false;
         this.sessionType = sessionType;
         this.aiPersonality = aiPersonality;
         this.endReason = endReason;

@@ -22,8 +22,9 @@ class SessionContextTest {
                 AiPersonality.NORMAL,
                 180,
                 null,
-                new ScenarioContext("음식점 예약", "사장님", "prompt", List.of(), null),
-                2
+                new ScenarioContext("음식점 예약", "사장님", "prompt", List.of(), null, null),
+                2,
+                "medium"
         );
 
         String json = objectMapper.writeValueAsString(context);
