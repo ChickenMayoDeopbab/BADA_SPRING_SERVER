@@ -20,7 +20,7 @@ class SessionClosedRequestTest {
                   "silence_total": 12.5,
                   "shake_count": 0,
                   "good_segments": [],
-                  "recording_url": null
+                  "recording_key": null
                 }
                 """;
 
