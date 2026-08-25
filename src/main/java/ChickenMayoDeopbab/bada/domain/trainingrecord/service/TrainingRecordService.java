@@ -114,6 +114,22 @@ public class TrainingRecordService {
         trainingRecordRepository.delete(record);
     }
 
+    // 회원 탈퇴 시 해당 사용자의 훈련 기록과 외부 리소스(S3 녹음, AI 피드백)를 함께 정리
+    @Transactional
+    public void deleteAllByUser(Users user) {
+        List<TrainingRecord> records = trainingRecordRepository.findAllByUser(user);
+        if (records.isEmpty()) {
+            return;
+        }
+
+        for (TrainingRecord record : records) {
+            deleteRecordingQuietly(record.getRecordingKey());
+            deleteFeedbackQuietly(record.getSessionId());
+        }
+
+        trainingRecordRepository.deleteAll(records);
+    }
+
     @Transactional
     public AnxietyScoreResponse recordAnxietyScore(
             String sessionId,

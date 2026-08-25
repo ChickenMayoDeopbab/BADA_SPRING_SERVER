@@ -13,18 +13,22 @@ import ChickenMayoDeopbab.bada.global.exception.ApplicationException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class TrainingRecordServiceTest {
@@ -53,9 +57,13 @@ class TrainingRecordServiceTest {
     }
 
     private TrainingRecord record(String recordingKey) {
+        return record("sess-1", recordingKey);
+    }
+
+    private TrainingRecord record(String sessionId, String recordingKey) {
         return TrainingRecord.builder()
                 .user(user)
-                .sessionId("sess-1")
+                .sessionId(sessionId)
                 .recordingKey(recordingKey)
                 .build();
     }
@@ -128,5 +136,44 @@ class TrainingRecordServiceTest {
         verify(fileService, never()).deleteByKey(anyString());
         verify(feedbackCleanupPort).deleteBySessionId("sess-1");
         verify(trainingRecordRepository).delete(record);
+    }
+
+    @Test
+    void deleteAllByUserRemovesEveryRecordWithItsRecordingAndFeedback() {
+        TrainingRecord first = record("sess-1", "recordings/sess-1.wav");
+        TrainingRecord second = record("sess-2", "recordings/sess-2.wav");
+        List<TrainingRecord> records = List.of(first, second);
+        when(trainingRecordRepository.findAllByUser(user)).thenReturn(records);
+
+        service.deleteAllByUser(user);
+
+        InOrder order = inOrder(fileService, feedbackCleanupPort, trainingRecordRepository);
+        order.verify(fileService).deleteByKey("recordings/sess-1.wav");
+        order.verify(feedbackCleanupPort).deleteBySessionId("sess-1");
+        order.verify(fileService).deleteByKey("recordings/sess-2.wav");
+        order.verify(feedbackCleanupPort).deleteBySessionId("sess-2");
+        order.verify(trainingRecordRepository).deleteAll(records);
+    }
+
+    @Test
+    void deleteAllByUserWithoutRecordsTouchesNothing() {
+        when(trainingRecordRepository.findAllByUser(user)).thenReturn(List.of());
+
+        service.deleteAllByUser(user);
+
+        verify(trainingRecordRepository, never()).deleteAll(any());
+        verifyNoInteractions(fileService, feedbackCleanupPort);
+    }
+
+    @Test
+    void deleteAllByUserContinuesWhenExternalCleanupFails() {
+        List<TrainingRecord> records = List.of(record("sess-1", "recordings/sess-1.wav"));
+        when(trainingRecordRepository.findAllByUser(user)).thenReturn(records);
+        doThrow(new RuntimeException("s3 down")).when(fileService).deleteByKey(anyString());
+        doThrow(new RuntimeException("ai down")).when(feedbackCleanupPort).deleteBySessionId(anyString());
+
+        service.deleteAllByUser(user);
+
+        verify(trainingRecordRepository).deleteAll(records);
     }
 }

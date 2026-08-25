@@ -1,10 +1,14 @@
 package ChickenMayoDeopbab.bada.domain.user.service;
 
 import ChickenMayoDeopbab.bada.domain.attendance.repository.AttendanceQueryRepository;
+import ChickenMayoDeopbab.bada.domain.callanxiety.repository.CallAnxietyStateRepository;
+import ChickenMayoDeopbab.bada.domain.attendance.repository.AttendanceRepository;
 import ChickenMayoDeopbab.bada.domain.diagnosis.entity.DiagnosisResult;
 import ChickenMayoDeopbab.bada.domain.diagnosis.exception.DiagnosisResultStatusCode;
 import ChickenMayoDeopbab.bada.domain.diagnosis.repository.DiagnosisResultRepository;
+import ChickenMayoDeopbab.bada.domain.trainingcallschedule.repository.TrainingCallScheduleRepository;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.repository.TrainingRecordRepository;
+import ChickenMayoDeopbab.bada.domain.trainingrecord.service.TrainingRecordService;
 import ChickenMayoDeopbab.bada.domain.user.dto.request.SignUpRequest;
 import ChickenMayoDeopbab.bada.domain.user.dto.request.UpdateMyPageRequest;
 import ChickenMayoDeopbab.bada.domain.user.dto.response.MyPageResponse;
@@ -28,7 +32,11 @@ public class UserService {
     private final UsersRepository usersRepository;
     private final DiagnosisResultRepository diagnosisResultRepository;
     private final AttendanceQueryRepository attendanceQueryRepository;
+    private final AttendanceRepository attendanceRepository;
+    private final CallAnxietyStateRepository callAnxietyStateRepository;
     private final TrainingRecordRepository trainingRecordRepository;
+    private final TrainingRecordService trainingRecordService;
+    private final TrainingCallScheduleRepository trainingCallScheduleRepository;
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
     private final RedisTemplate<String, String> redisTemplate;
 
@@ -41,12 +49,20 @@ public class UserService {
         redisTemplate.delete(request.email());
     }
 
+    // users를 FK로 참조하는 자식 데이터를 먼저 정리한 뒤 회원을 삭제한다.
     public void withdraw() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Users user = usersRepository.findByUsername(auth.getName())
-                .orElseThrow(() -> new ApplicationException(UsersStatusCode.USER_NOT_FOUND));
+        Users user = getUserInfo();
+        Long userId = user.getUserId();
+
+        trainingRecordService.deleteAllByUser(user);
+        trainingCallScheduleRepository.deleteAllByUser(user);
+        attendanceRepository.deleteAllByUser(user);
+        callAnxietyStateRepository.deleteByUser(user);
+        diagnosisResultRepository.deleteAllByUser(user);
 
         usersRepository.delete(user);
+
+        redisTemplate.delete("refreshToken: " + userId);
     }
 
     public ApiResponse<MyPageResponse> myPage() {

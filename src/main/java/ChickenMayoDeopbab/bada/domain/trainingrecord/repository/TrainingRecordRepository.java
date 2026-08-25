@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, Long> {
@@ -28,4 +29,6 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
     Optional<TrainingRecord> findBySessionIdAndUser(String sessionId, Users user);
 
     int countByUser(Users user);
+
+    List<TrainingRecord> findAllByUser(Users user);
 }
