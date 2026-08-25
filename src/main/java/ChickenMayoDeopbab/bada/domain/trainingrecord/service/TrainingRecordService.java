@@ -1,11 +1,17 @@
 package ChickenMayoDeopbab.bada.domain.trainingrecord.service;
 
+import ChickenMayoDeopbab.bada.domain.callanxiety.entity.CallAnxietyState;
+import ChickenMayoDeopbab.bada.domain.callanxiety.model.CallAnxietyCalculation;
+import ChickenMayoDeopbab.bada.domain.callanxiety.repository.CallAnxietyStateRepository;
+import ChickenMayoDeopbab.bada.domain.callanxiety.service.CallAnxietyScoreCalculator;
+import ChickenMayoDeopbab.bada.domain.diagnosis.entity.CallPhobiaLevel;
 import ChickenMayoDeopbab.bada.domain.file.service.FileService;
 import ChickenMayoDeopbab.bada.domain.session.enums.EndReason;
 import ChickenMayoDeopbab.bada.domain.session.enums.SessionType;
 import ChickenMayoDeopbab.bada.domain.session.model.GoodSegment;
 import ChickenMayoDeopbab.bada.domain.session.model.TranscriptTurn;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.*;
+import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingAnalysisMetrics;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingRecord;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.exception.TrainingRecordStatusCode;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.port.FeedbackCleanupPort;
@@ -25,7 +31,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 @Slf4j
@@ -39,6 +48,15 @@ public class TrainingRecordService {
     private final ObjectMapper objectMapper;
     private final FileService fileService;
     private final FeedbackCleanupPort feedbackCleanupPort;
+    private final CallAnxietyStateRepository callAnxietyStateRepository;
+    private final CallAnxietyScoreCalculator callAnxietyScoreCalculator;
+    private static final Set<SessionType> SCORE_SUPPORTED_TYPES = Set.of(SessionType.SCENARIO, SessionType.CUSTOM);
+    private static final Set<EndReason> SCORE_ALLOWED_END_REASONS =
+            Set.of(
+                    EndReason.SCENARIO_DONE,
+                    EndReason.END_CALL,
+                    EndReason.TIMEOUT
+            );
 
     private static final Set<EndReason> ANXIETY_SCORE_EXCLUDED_END_REASONS =
             Set.of(EndReason.ERROR, EndReason.NO_AUDIO);
@@ -83,6 +101,13 @@ public class TrainingRecordService {
         TrainingRecord record = trainingRecordRepository.findByRecordIdAndUser(recordId, user)
                 .orElseThrow(() -> new ApplicationException(TrainingRecordStatusCode.RECORD_NOT_FOUND));
 
+        if (record.isScoreApplied()) {
+            throw new ApplicationException(
+                    TrainingRecordStatusCode
+                            .SCORE_APPLIED_RECORD_CANNOT_BE_DELETED
+            );
+        }
+
         deleteRecordingQuietly(record.getRecordingKey());
         deleteFeedbackQuietly(record.getSessionId());
 
@@ -90,31 +115,141 @@ public class TrainingRecordService {
     }
 
     @Transactional
-    public AnxietyScoreResponse recordAnxietyScore(String sessionId, Short score) {
+    public AnxietyScoreResponse recordAnxietyScore(
+            String sessionId,
+            Short anxietyScore
+    ) {
+        validateSubjectiveAnxiety(anxietyScore);
+
         Users user = getUserInfo();
-        TrainingRecord record = trainingRecordRepository.findBySessionIdAndUser(sessionId, user)
-                .orElseThrow(() -> new ApplicationException(TrainingRecordStatusCode.RECORD_NOT_FOUND));
-        Boolean isScenarioTraining =
-                record.getSessionType() == SessionType.SCENARIO;
 
-        boolean isExcludedEndReason =
-                ANXIETY_SCORE_EXCLUDED_END_REASONS.contains(
-                        record.getEndReason()
-                );
+        TrainingRecord record = trainingRecordRepository
+                .findBySessionIdAndUser(sessionId, user)
+                .orElseThrow(() -> new ApplicationException(
+                        TrainingRecordStatusCode.RECORD_NOT_FOUND
+                ));
 
-        if (!isScenarioTraining || isExcludedEndReason) {
-            throw new ApplicationException(
-                    TrainingRecordStatusCode.ANXIETY_SCORE_NOT_ALLOWED
-            );
-        }
+        validateScoreApplicableTraining(record);
 
         if (record.getAnxietyScore() != null) {
-            throw new ApplicationException(
-                    TrainingRecordStatusCode.ANXIETY_SCORE_ALREADY_RECORDED
+            if (!record.hasSameAnxietyScore(anxietyScore)) {
+                throw new ApplicationException(
+                        TrainingRecordStatusCode
+                                .ANXIETY_SCORE_ALREADY_RECORDED
+                );
+            }
+
+            if (record.isScoreProcessed()) {
+                return AnxietyScoreResponse.from(record);
+            }
+        }
+
+        TrainingAnalysisMetrics analysis =
+                record.getAnalysis();
+
+        if (analysis == null) {
+            return excludeScore(
+                    record,
+                    anxietyScore,
+                    "MISSING_ANALYSIS"
             );
         }
 
-        record.recordAnxietyScore(score);
+        if (!analysis.isPassed()) {
+            String reason =
+                    analysis.getAnalysisExclusionReason();
+
+            if (reason == null || reason.isBlank()) {
+                reason = "LOW_ANALYSIS_QUALITY";
+            }
+
+            return excludeScore(
+                    record,
+                    anxietyScore,
+                    reason
+            );
+        }
+
+        if (!analysis.hasObjectiveScores()) {
+            return excludeScore(
+                    record,
+                    anxietyScore,
+                    "MISSING_OBJECTIVE_SCORE"
+            );
+        }
+
+        if (!analysis.hasValidObjectiveScores()) {
+            return excludeScore(
+                    record,
+                    anxietyScore,
+                    "INVALID_OBJECTIVE_SCORE"
+            );
+        }
+
+        if (!analysis.hasVersions()) {
+            return excludeScore(
+                    record,
+                    anxietyScore,
+                    "MISSING_ANALYSIS_VERSION"
+            );
+        }
+
+        CallAnxietyState state = callAnxietyStateRepository
+                .findByUserForUpdate(user)
+                .orElseThrow(() -> new ApplicationException(
+                        TrainingRecordStatusCode
+                                .CALL_ANXIETY_STATE_NOT_FOUND
+                ));
+
+        if (!Objects.equals(
+                state.getScoringVersion(),
+                CallAnxietyState.SCORING_VERSION
+        )) {
+            return excludeScore(
+                    record,
+                    anxietyScore,
+                    "SCORING_VERSION_MISMATCH"
+            );
+        }
+
+        BigDecimal scoreBefore =
+                state.getCurrentCallAnxietyIndex();
+
+        CallAnxietyCalculation calculation =
+                callAnxietyScoreCalculator.calculate(
+                        scoreBefore,
+                        analysis.getStabilityScore(),
+                        analysis.getConversationScore(),
+                        analysis.getFluencyScore(),
+                        anxietyScore.intValue()
+                );
+
+        CallPhobiaLevel calculatedLevel =
+                callAnxietyScoreCalculator.calculateLevel(
+                        calculation
+                                .newCurrentCallAnxietyIndex()
+                );
+
+        long scoreSequence =
+                (long) state.getValidTrainingCount() + 1L;
+
+        LocalDateTime appliedAt =
+                LocalDateTime.now();
+
+
+        state.applyValidTraining(
+                calculation.newCurrentCallAnxietyIndex(),
+                calculatedLevel
+        );
+
+        record.applyScore(
+                anxietyScore,
+                calculation,
+                scoreBefore,
+                scoreSequence,
+                state.getScoringVersion(),
+                appliedAt
+        );
 
         return AnxietyScoreResponse.from(record);
     }
@@ -168,5 +303,54 @@ public class TrainingRecordService {
         } catch (Exception e) {
             throw new IllegalStateException("훈련 기록 JSON 파싱에 실패했습니다.", e);
         }
+    }
+
+    private void validateSubjectiveAnxiety(
+            Short anxietyScore
+    ) {
+        if (
+                anxietyScore == null
+                        || anxietyScore < 0
+                        || anxietyScore > 10
+        ) {
+            throw new IllegalArgumentException(
+                    "anxietyScore는 0~10 범위여야 합니다."
+            );
+        }
+    }
+
+    private void validateScoreApplicableTraining(
+            TrainingRecord record
+    ) {
+        if (!SCORE_SUPPORTED_TYPES.contains(
+                record.getSessionType()
+        )) {
+            throw new ApplicationException(
+                    TrainingRecordStatusCode
+                            .ANXIETY_SCORE_NOT_ALLOWED
+            );
+        }
+
+        if (!SCORE_ALLOWED_END_REASONS.contains(
+                record.getEndReason()
+        )) {
+            throw new ApplicationException(
+                    TrainingRecordStatusCode
+                            .ANXIETY_SCORE_NOT_ALLOWED
+            );
+        }
+    }
+
+    private AnxietyScoreResponse excludeScore(
+            TrainingRecord record,
+            Short anxietyScore,
+            String exclusionReason
+    ) {
+        record.excludeScore(
+                anxietyScore,
+                exclusionReason,
+                CallAnxietyState.SCORING_VERSION
+        );
+        return AnxietyScoreResponse.from(record);
     }
 }

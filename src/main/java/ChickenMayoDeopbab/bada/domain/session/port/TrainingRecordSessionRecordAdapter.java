@@ -4,6 +4,8 @@ import ChickenMayoDeopbab.bada.domain.session.enums.EndReason;
 import ChickenMayoDeopbab.bada.domain.session.model.GoodSegment;
 import ChickenMayoDeopbab.bada.domain.session.model.SessionContext;
 import ChickenMayoDeopbab.bada.domain.session.model.TranscriptTurn;
+import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.request.TrainingAnalysisRequest;
+import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingAnalysisMetrics;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingRecord;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.repository.TrainingRecordRepository;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
@@ -44,7 +46,8 @@ public class TrainingRecordSessionRecordAdapter implements SessionRecordPort {
             Double silenceTotal,
             Integer shakeCount,
             List<GoodSegment> goodSegments,
-            String recordingKey
+            String recordingKey,
+            TrainingAnalysisRequest analysis
     ) {
         if (trainingRecordRepository.existsBySessionId(sessionId)) {
             log.info("중복 세션 종료 기록 무시 sessionId={}", sessionId);
@@ -71,6 +74,7 @@ public class TrainingRecordSessionRecordAdapter implements SessionRecordPort {
                 .transcript(toJson(transcript))
                 .goodSegments(toJson(goodSegments))
                 .recordingKey(recordingKey)
+                .analysis(TrainingAnalysisMetrics.from(analysis))
                 .build();
 
         trainingRecordRepository.save(record);

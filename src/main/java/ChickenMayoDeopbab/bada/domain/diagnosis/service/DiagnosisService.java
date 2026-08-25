@@ -1,5 +1,7 @@
 package ChickenMayoDeopbab.bada.domain.diagnosis.service;
 
+import ChickenMayoDeopbab.bada.domain.callanxiety.entity.CallAnxietyState;
+import ChickenMayoDeopbab.bada.domain.callanxiety.repository.CallAnxietyStateRepository;
 import ChickenMayoDeopbab.bada.domain.diagnosis.dto.request.DiagnosisSubmitRequest;
 import ChickenMayoDeopbab.bada.domain.diagnosis.dto.response.DiagnosisQuestionResponse;
 import ChickenMayoDeopbab.bada.domain.diagnosis.dto.response.DiagnosisResultResponse;
@@ -15,6 +17,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RequiredArgsConstructor
@@ -24,6 +28,7 @@ public class DiagnosisService {
     private final DiagnosisResultRepository diagnosisResultRepository;
     private final UsersRepository usersRepository;
     private final DiagnosisAiService diagnosisAiService;
+    private final CallAnxietyStateRepository callAnxietyStateRepository;
 
     @Transactional(readOnly = true)
     public List<DiagnosisQuestionResponse> getQuestions(DiagnosisType type) {
@@ -56,6 +61,8 @@ public class DiagnosisService {
                 .summary(summary)
                 .build();
         diagnosisResultRepository.save(result);
+
+        initializeCallAnxietyState(user, score, level);
         return DiagnosisResultResponse.of(score, level, summary);
     }
 
@@ -74,5 +81,28 @@ public class DiagnosisService {
             case 5 -> CallPhobiaLevel.LEVEL_5;
             default -> CallPhobiaLevel.LEVEL_1;
         };
+    }
+
+    private void initializeCallAnxietyState(
+            Users user,
+            double score,
+            CallPhobiaLevel level
+    ) {
+        if (user == null) {
+            return;
+        }
+
+        if (callAnxietyStateRepository.existsByUser(user)) {
+            return;
+        }
+
+        CallAnxietyState state = CallAnxietyState.create(
+                user,
+                BigDecimal.valueOf(score),
+                level,
+                LocalDateTime.now()
+        );
+
+        callAnxietyStateRepository.save(state);
     }
 }

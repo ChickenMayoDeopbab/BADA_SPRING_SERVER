@@ -4,6 +4,7 @@ import ChickenMayoDeopbab.bada.domain.session.enums.EndReason;
 import ChickenMayoDeopbab.bada.domain.session.model.GoodSegment;
 import ChickenMayoDeopbab.bada.domain.session.model.SessionContext;
 import ChickenMayoDeopbab.bada.domain.session.model.TranscriptTurn;
+import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.request.TrainingAnalysisRequest;
 
 import java.util.List;
 
@@ -18,6 +19,7 @@ public interface SessionRecordPort {
             Double silenceTotal,
             Integer shakeCount,
             List<GoodSegment> goodSegments,
-            String recordingKey
+            String recordingKey,
+            TrainingAnalysisRequest analysis
     );
 }

@@ -13,5 +13,6 @@ public record SessionContext(
         Integer maxDurationSeconds,
         LocalDateTime startedAt,
         ScenarioContext scenario,
-        Integer scriptLevel     // 힌트 레벨 1은 추천 문장, 2는 조언, 3은 없음
+        Integer scriptLevel,     // 힌트 레벨 1은 추천 문장, 2는 조언, 3은 없음
+        String difficulty
 ) {}

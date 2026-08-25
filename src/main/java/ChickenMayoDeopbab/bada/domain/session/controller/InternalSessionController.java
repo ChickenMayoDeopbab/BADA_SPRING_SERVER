@@ -36,7 +36,8 @@ public class InternalSessionController {
                 request.silenceTotal(),
                 request.shakeCount(),
                 request.goodSegments(),
-                request.recordingKey()
+                request.recordingKey(),
+                request.analysis()
         );
         return ApiResponse.ok("세션 종료가 처리되었습니다.");
     }

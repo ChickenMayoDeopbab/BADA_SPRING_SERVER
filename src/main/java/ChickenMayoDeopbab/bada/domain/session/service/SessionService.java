@@ -11,6 +11,7 @@ import ChickenMayoDeopbab.bada.domain.session.model.TranscriptTurn;
 import ChickenMayoDeopbab.bada.domain.session.port.ScenarioPort;
 import ChickenMayoDeopbab.bada.domain.session.port.SessionRecordPort;
 import ChickenMayoDeopbab.bada.domain.session.repository.SessionRedisRepository;
+import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.request.TrainingAnalysisRequest;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.repository.TrainingRecordRepository;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
 import ChickenMayoDeopbab.bada.domain.user.exception.UsersStatusCode;
@@ -64,7 +65,8 @@ public class SessionService {
                 resolveMaxDuration(request),
                 LocalDateTime.now(),
                 scenario,
-                resolveScriptLevel(trainedCount)
+                resolveScriptLevel(trainedCount),
+                request.difficulty()
         );
 
         String sessionId = UUID.randomUUID().toString();
@@ -82,14 +84,15 @@ public class SessionService {
             Double silenceTotal,
             Integer shakeCount,
             List<GoodSegment> goodSegments,
-            String recordingKey
+            String recordingKey,
+            TrainingAnalysisRequest analysis
     ) {
         SessionContext context = sessionRedisRepository.find(sessionId);
         if (context == null) {
             log.warn("종료 콜백 - 세션 없음(만료/미존재) sessionId={} reason={}", sessionId, reason);
             return;
         }
-        sessionRecordPort.record(sessionId, context, reason, transcript, silenceTotal, shakeCount, goodSegments, recordingKey);
+        sessionRecordPort.record(sessionId, context, reason, transcript, silenceTotal, shakeCount, goodSegments, recordingKey, analysis);
         sessionRedisRepository.delete(sessionId);
     }
 

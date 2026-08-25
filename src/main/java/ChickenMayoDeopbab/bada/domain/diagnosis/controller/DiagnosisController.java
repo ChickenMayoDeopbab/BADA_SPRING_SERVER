@@ -6,6 +6,7 @@ import ChickenMayoDeopbab.bada.domain.diagnosis.dto.response.DiagnosisResultResp
 import ChickenMayoDeopbab.bada.domain.diagnosis.entity.DiagnosisType;
 import ChickenMayoDeopbab.bada.domain.diagnosis.service.DiagnosisService;
 import ChickenMayoDeopbab.bada.global.common.ApiResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,7 +24,7 @@ public class DiagnosisController {
     }
 
     @PostMapping("/submit")
-    public ApiResponse<DiagnosisResultResponse> submitAnswers(@RequestBody DiagnosisSubmitRequest request) {
+    public ApiResponse<DiagnosisResultResponse> submitAnswers(@Valid @RequestBody DiagnosisSubmitRequest request) {
         return ApiResponse.ok(diagnosisService.submitAnswers(request));
     }
 }
