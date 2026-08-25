@@ -1,4 +1,4 @@
-package ChickenMayoDeopbab.bada.domain.adminstatistics.Controller;
+package ChickenMayoDeopbab.bada.domain.adminstatistics.controller;
 
 import ChickenMayoDeopbab.bada.domain.adminstatistics.dto.response.CallAnxietySummaryResponse;
 import ChickenMayoDeopbab.bada.domain.adminstatistics.model.CallAnxietyCsvExport;

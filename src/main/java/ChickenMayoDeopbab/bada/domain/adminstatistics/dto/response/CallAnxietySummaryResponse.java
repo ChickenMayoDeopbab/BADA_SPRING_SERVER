@@ -11,7 +11,10 @@ public record CallAnxietySummaryResponse(
         long eligibleUserCount,
         long improvedUserCount,
         BigDecimal improvementRate,
+        BigDecimal averageInitialScore,
+        BigDecimal averageCurrentIndex,
+        BigDecimal averageScoreChange,
         long levelImprovedUserCount,
-        BigDecimal averageScoreChange
+        BigDecimal levelImprovementRate
 ) {
 }

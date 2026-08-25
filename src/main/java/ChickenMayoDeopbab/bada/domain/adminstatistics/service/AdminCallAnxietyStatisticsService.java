@@ -60,7 +60,7 @@ public class AdminCallAnxietyStatisticsService {
                         .count();
 
         long levelImprovedUserCount =
-                userStatistics.stream()
+                eligibleUsers.stream()
                         .filter(UserStatistics::levelImproved)
                         .count();
 
@@ -70,8 +70,33 @@ public class AdminCallAnxietyStatisticsService {
                         eligibleUserCount
                 );
 
+        BigDecimal averageInitialScore =
+                calculateAverageScore(
+                        eligibleUsers,
+                        statistics -> statistics
+                                .state()
+                                .initialSelfReportScore()
+                );
+
+        BigDecimal averageCurrentIndex =
+                calculateAverageScore(
+                        eligibleUsers,
+                        statistics -> statistics
+                                .state()
+                                .currentCallAnxietyIndex()
+                );
+
         BigDecimal averageScoreChange =
-                calculateAverageScoreChange(eligibleUsers);
+                calculateAverageScore(
+                        eligibleUsers,
+                        UserStatistics::scoreChange
+                );
+
+        BigDecimal levelImprovementRate =
+                calculateImprovementRate(
+                        levelImprovedUserCount,
+                        eligibleUserCount
+                );
 
         return new CallAnxietySummaryResponse(
                 generatedAt,
@@ -81,8 +106,11 @@ public class AdminCallAnxietyStatisticsService {
                 eligibleUserCount,
                 improvedUserCount,
                 improvementRate,
+                averageInitialScore,
+                averageCurrentIndex,
+                averageScoreChange,
                 levelImprovedUserCount,
-                averageScoreChange
+                levelImprovementRate
         );
     }
 
@@ -310,8 +338,9 @@ public class AdminCallAnxietyStatisticsService {
                 );
     }
 
-    private BigDecimal calculateAverageScoreChange(
-            List<UserStatistics> eligibleUsers
+    private BigDecimal calculateAverageScore(
+            List<UserStatistics> eligibleUsers,
+            Function<UserStatistics, BigDecimal> scoreExtractor
     ) {
         if (eligibleUsers.isEmpty()) {
             return null;
@@ -319,7 +348,7 @@ public class AdminCallAnxietyStatisticsService {
 
         BigDecimal total =
                 eligibleUsers.stream()
-                        .map(UserStatistics::scoreChange)
+                        .map(scoreExtractor)
                         .reduce(
                                 BigDecimal.ZERO,
                                 BigDecimal::add

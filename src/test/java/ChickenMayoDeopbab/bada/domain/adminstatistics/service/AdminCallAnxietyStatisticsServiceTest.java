@@ -111,13 +111,22 @@ class AdminCallAnxietyStatisticsServiceTest {
         assertThat(result.improvementRate())
                 .isEqualByComparingTo("50.00");
 
-        assertThat(result.levelImprovedUserCount())
-                .isEqualTo(1);
+        assertThat(result.averageInitialScore())
+                .isEqualByComparingTo("3.00");
+
+        assertThat(result.averageCurrentIndex())
+                .isEqualByComparingTo("2.85");
 
         // (0.4 + -0.1) / 2 = 0.15
         // 개선 사용자만이 아니라 eligible 전체를 사용한다.
         assertThat(result.averageScoreChange())
                 .isEqualByComparingTo("0.15");
+
+        assertThat(result.levelImprovedUserCount())
+                .isEqualTo(1);
+
+        assertThat(result.levelImprovementRate())
+                .isEqualByComparingTo("50.00");
     }
 
     @Test
@@ -150,7 +159,16 @@ class AdminCallAnxietyStatisticsServiceTest {
         assertThat(result.improvementRate())
                 .isNull();
 
+        assertThat(result.averageInitialScore())
+                .isNull();
+
+        assertThat(result.averageCurrentIndex())
+                .isNull();
+
         assertThat(result.averageScoreChange())
+                .isNull();
+
+        assertThat(result.levelImprovementRate())
                 .isNull();
     }
 
