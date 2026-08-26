@@ -1,5 +1,6 @@
 package ChickenMayoDeopbab.bada.domain.trainingrecord.repository;
 
+import ChickenMayoDeopbab.bada.domain.adminstatistics.model.AppliedTrainingStatisticsRow;
 import ChickenMayoDeopbab.bada.domain.session.enums.EndReason;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingRecord;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
@@ -8,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.Collection;
 import java.util.List;
@@ -31,4 +33,21 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
     int countByUser(Users user);
 
     List<TrainingRecord> findAllByUser(Users user);
+
+    @Query("""
+        select new ChickenMayoDeopbab.bada.domain.adminstatistics.model.AppliedTrainingStatisticsRow(
+            training.user.userId,
+            training.difficulty,
+            training.aiPersonality,
+            training.analysis.analyzerVersion,
+            training.scoringVersion,
+            training.trainingStateIndex,
+            training.scoreSequence
+        )
+        from TrainingRecord training
+        where training.scoreApplied = true
+        order by training.user.userId asc,
+                 training.scoreSequence desc
+        """)
+    List<AppliedTrainingStatisticsRow> findAllAppliedForAdminStatistics();
 }
