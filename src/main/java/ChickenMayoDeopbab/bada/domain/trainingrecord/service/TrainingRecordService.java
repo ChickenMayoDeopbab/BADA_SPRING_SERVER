@@ -91,7 +91,8 @@ public class TrainingRecordService {
         return FeedbackResponse.of(
                 trainingRecord,
                 parseGoodSegments(trainingRecord.getGoodSegments()),
-                resolveRecordingUrl(trainingRecord.getRecordingKey())
+                resolveRecordingUrl(trainingRecord.getRecordingKey()),
+                parseTranscript(trainingRecord.getTranscript())
         );
     }
 
