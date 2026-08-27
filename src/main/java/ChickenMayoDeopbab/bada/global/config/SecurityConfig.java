@@ -57,35 +57,9 @@ public class SecurityConfig {
                 .logout(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.POST,
-                                "/api/v1/auth/signup",
-                                "/api/v1/auth/login",
-                                "/api/v1/auth/refresh",
-                                "/api/v1/auth/email/send",
-                                "/api/v1/auth/email/check",
-                                "/api/v1/auth/check/username",
-                                "/api/v1/auth/oauth/token",
-                                "api/diagnosis/submit",
-                                "/api/v1/file"  // TODO(임시/테스트용): S3 업로드 확인용. 검증 후 제거.
-                        ).permitAll()
-                        .requestMatchers(HttpMethod.GET,
-                                "/api/v1/auth/google",
-                                "/api/v1/auth/naver",
-                                "/api/diagnosis/questions"
-                        ).permitAll()
-                        .requestMatchers(
-                                "/",
-                                "/css/**",
-                                "images/**",
-                                "/js/**",
-                                "/login/**",
-                                "/oauth2/**",
-                                "/logout/*",
-                                "/posts/**",
-                                "/comments/**"
-                        ).permitAll()
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
-                        .requestMatchers("/internal/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, PublicEndpoints.POST).permitAll()
+                        .requestMatchers(HttpMethod.GET, PublicEndpoints.GET).permitAll()
+                        .requestMatchers(PublicEndpoints.ANY).permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
