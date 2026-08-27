@@ -3,6 +3,7 @@ package ChickenMayoDeopbab.bada.domain.trainingrecord.repository;
 import ChickenMayoDeopbab.bada.domain.adminstatistics.model.AppliedTrainingStatisticsRow;
 import ChickenMayoDeopbab.bada.domain.session.enums.EndReason;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingRecord;
+import ChickenMayoDeopbab.bada.domain.user.entity.Role;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
@@ -10,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Collection;
 import java.util.List;
@@ -50,4 +52,29 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
                  training.scoreSequence desc
         """)
     List<AppliedTrainingStatisticsRow> findAllAppliedForAdminStatistics();
+
+    @Query("""
+        select count(distinct training.user.userId)
+        from TrainingRecord training
+        where training.user.role = :role
+          and training.endReason not in :excludedEndReasons
+        """)
+    long countDistinctTrainedUsers(
+            @Param("role") Role role,
+            @Param("excludedEndReasons")
+            Collection<EndReason> excludedEndReasons
+    );
+
+    @Query("""
+        select count(distinct training.user.userId)
+        from TrainingRecord training
+        where training.user.role = :role
+          and training.user.paymentIntended = true
+          and training.endReason not in :excludedEndReasons
+        """)
+    long countDistinctPaymentIntendedUsers(
+            @Param("role") Role role,
+            @Param("excludedEndReasons")
+            Collection<EndReason> excludedEndReasons
+    );
 }

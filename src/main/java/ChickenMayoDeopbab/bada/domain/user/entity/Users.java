@@ -54,6 +54,10 @@ public class Users {
 
     private String providerId;
 
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean paymentIntended = false;
+
 
     @PrePersist
     public void prePersist() {
@@ -87,5 +91,9 @@ public class Users {
         this.name = name;
         this.username = username;
         this.profileImage = s3Key;
+    }
+
+    public void intendPayment() {
+        this.paymentIntended = true;
     }
 }
