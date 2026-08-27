@@ -10,10 +10,12 @@ import ChickenMayoDeopbab.bada.domain.auth.dto.request.RefreshRequest;
 import ChickenMayoDeopbab.bada.domain.auth.dto.response.TokenResponse;
 import ChickenMayoDeopbab.bada.domain.auth.service.AuthService;
 import ChickenMayoDeopbab.bada.domain.auth.service.EmailService;
+import ChickenMayoDeopbab.bada.domain.auth.service.OAuthRedirectUriResolver;
 import ChickenMayoDeopbab.bada.domain.user.dto.request.SignUpRequest;
 import ChickenMayoDeopbab.bada.domain.user.service.UserService;
 import ChickenMayoDeopbab.bada.global.common.ApiResponse;
 import ChickenMayoDeopbab.bada.global.jwt.MemberDetails;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +26,7 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
@@ -35,6 +38,7 @@ public class AuthController {
     private final UserService userService;
     private final AuthService authService;
     private final EmailService emailService;
+    private final OAuthRedirectUriResolver redirectUriResolver;
 
     // 자체 회원가입
     @PostMapping("/signup")
@@ -83,14 +87,20 @@ public class AuthController {
     // google login
     @GetMapping("/google")
     public void googleLogin(
+            @RequestParam(required = false) String redirectUri,
+            HttpServletRequest request,
             HttpServletResponse response) throws IOException {
+        redirectUriResolver.remember(request, response, redirectUri);
         response.sendRedirect("/oauth2/authorization/google");
     }
 
     // naver login
     @GetMapping("/naver")
     public void naverLogin(
+            @RequestParam(required = false) String redirectUri,
+            HttpServletRequest request,
             HttpServletResponse response) throws IOException {
+        redirectUriResolver.remember(request, response, redirectUri);
         response.sendRedirect("/oauth2/authorization/naver");
     }
 

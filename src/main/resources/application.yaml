@@ -86,6 +86,7 @@ app:
 
   oauth2:
     app-redirect-uri: ${APP_OAUTH_REDIRECT_URI}
+    allowed-redirect-uris: ${OAUTH_ALLOWED_REDIRECT_URIS:}
 
   ai:
     base-url: ${AI_BASE_URL}
