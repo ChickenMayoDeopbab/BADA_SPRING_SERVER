@@ -25,6 +25,12 @@ services:
       - "8080:8080"
     env_file:
       - .env
+    environment:
+      FIREBASE_ENABLED: ${FIREBASE_ENABLED:-false}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-bada-23d9b}
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/firebase-service-account.json
+    volumes:
+      - ${FIREBASE_CREDENTIALS_PATH:-./src/main/resources/bada-firebase-service-account.json}:/run/secrets/firebase-service-account.json:ro
     depends_on:
       db:
         condition: service_healthy
