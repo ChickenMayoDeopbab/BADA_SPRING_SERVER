@@ -58,9 +58,9 @@ public class FileService {
     }
 
     @Transactional(readOnly = true)
-    public String getUrl(Long fileId) {
-        File file = fileRepository.findById(fileId)
-                .orElseThrow(() -> ApplicationException.of(FileStatusCode.FILE_NOT_FOUND));
+    public String getUrl(String s3Key) {
+        File file = fileRepository.findByS3Key(s3Key)
+                .orElseThrow(() -> new ApplicationException(FileStatusCode.FILE_NOT_FOUND));
         return generatePresignedUrl(file.getS3Key());
     }
 
