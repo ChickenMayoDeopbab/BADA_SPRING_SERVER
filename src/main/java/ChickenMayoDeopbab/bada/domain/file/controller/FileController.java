@@ -20,8 +20,8 @@ public class FileController {
     private final FileService fileService;
 
     @PostMapping
-    public ApiResponse<GetUrlResponse> getPresignedUrl(@RequestParam("fileId") Long fileId) {
-        String url = fileService.getUrl(fileId);
+    public ApiResponse<GetUrlResponse> getPresignedUrl(@RequestParam("s3Key") String s3Key) {
+        String url = fileService.getUrl(s3Key);
         return ApiResponse.ok(new GetUrlResponse(url));
     }
 
