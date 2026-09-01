@@ -3,6 +3,7 @@ package ChickenMayoDeopbab.bada.domain.trainingcallschedule.service;
 import ChickenMayoDeopbab.bada.domain.session.dto.request.CreateSessionRequest;
 import ChickenMayoDeopbab.bada.domain.session.dto.response.CreateSessionResponse;
 import ChickenMayoDeopbab.bada.domain.session.service.SessionService;
+import ChickenMayoDeopbab.bada.domain.notification.service.TrainingReminderNotificationService;
 import ChickenMayoDeopbab.bada.domain.trainingcallschedule.dto.request.CreateTrainingCallScheduleRequest;
 import ChickenMayoDeopbab.bada.domain.trainingcallschedule.dto.response.AcceptTrainingCallScheduleResponse;
 import ChickenMayoDeopbab.bada.domain.trainingcallschedule.dto.response.TrainingCallScheduleResponse;
@@ -30,6 +31,7 @@ public class TrainingCallScheduleService {
     private final UsersRepository usersRepository;
     private final TrainingCallScheduleRepository trainingCallScheduleRepository;
     private final SessionService sessionService;
+    private final TrainingReminderNotificationService trainingReminderNotificationService;
 
     @Transactional
     public TrainingCallScheduleResponse create(CreateTrainingCallScheduleRequest request) {
@@ -51,7 +53,9 @@ public class TrainingCallScheduleService {
                 ))
                 .build();
 
-        return TrainingCallScheduleResponse.from(trainingCallScheduleRepository.save(schedule));
+        TrainingCallSchedule savedSchedule = trainingCallScheduleRepository.save(schedule);
+        trainingReminderNotificationService.saveFor(savedSchedule);
+        return TrainingCallScheduleResponse.from(savedSchedule);
     }
 
     @Transactional
