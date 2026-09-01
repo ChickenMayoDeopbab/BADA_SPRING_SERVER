@@ -3,6 +3,7 @@ package ChickenMayoDeopbab.bada.domain.trainingcallschedule.service;
 import ChickenMayoDeopbab.bada.domain.session.enums.AiPersonality;
 import ChickenMayoDeopbab.bada.domain.session.enums.SessionType;
 import ChickenMayoDeopbab.bada.domain.session.service.SessionService;
+import ChickenMayoDeopbab.bada.domain.notification.service.TrainingReminderNotificationService;
 import ChickenMayoDeopbab.bada.domain.trainingcallschedule.dto.request.CreateTrainingCallScheduleRequest;
 import ChickenMayoDeopbab.bada.domain.trainingcallschedule.dto.response.AcceptTrainingCallScheduleResponse;
 import ChickenMayoDeopbab.bada.domain.trainingcallschedule.dto.response.TrainingCallScheduleResponse;
@@ -37,10 +38,13 @@ class TrainingCallScheduleServiceTest {
     private final TrainingCallScheduleRepository trainingCallScheduleRepository =
             mock(TrainingCallScheduleRepository.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final TrainingReminderNotificationService trainingReminderNotificationService =
+            mock(TrainingReminderNotificationService.class);
     private final TrainingCallScheduleService service = new TrainingCallScheduleService(
             usersRepository,
             trainingCallScheduleRepository,
-            sessionService
+            sessionService,
+            trainingReminderNotificationService
     );
 
     @AfterEach
@@ -96,6 +100,7 @@ class TrainingCallScheduleServiceTest {
         ArgumentCaptor<TrainingCallSchedule> captor = ArgumentCaptor.forClass(TrainingCallSchedule.class);
         verify(trainingCallScheduleRepository).save(captor.capture());
         TrainingCallSchedule schedule = captor.getValue();
+        verify(trainingReminderNotificationService).saveFor(schedule);
         assertThat(schedule.getUser()).isEqualTo(user);
         assertThat(schedule.getScenarioId()).isEqualTo(3L);
         assertThat(schedule.getStatus()).isEqualTo(TrainingCallScheduleStatus.SCHEDULED);
