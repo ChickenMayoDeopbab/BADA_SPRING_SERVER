@@ -59,6 +59,23 @@ public class OAuthAttributes {
                 .build();
     }
 
+    /**
+     * 애플은 id_token 클레임에 sub / email 정도만 담겨 온다.
+     * 프로필 이미지는 제공하지 않고, 이름은 콜백 폼의 user 파라미터에서 따로 읽어 넘겨받는다.
+     */
+    public static OAuthAttributes ofApple(String userNameAttributeName,
+                                          Map<String, Object> claims,
+                                          String name) {
+        return OAuthAttributes.builder()
+                .attributes(claims)
+                .nameAttributeKey(userNameAttributeName != null ? userNameAttributeName : "sub")
+                .name(name)
+                .email((String) claims.get("email"))
+                .picture(null)
+                .provider(Provider.APPLE)
+                .build();
+    }
+
     public static OAuthAttributes ofNaver(String userNameAttributeName,
                                           Map<String, Object> attributes) {
         Map<String, Object> response = (Map<String, Object>) attributes.get("response");

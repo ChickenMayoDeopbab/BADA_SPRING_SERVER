@@ -104,6 +104,16 @@ public class AuthController {
         response.sendRedirect("/oauth2/authorization/naver");
     }
 
+    // apple login
+    @GetMapping("/apple")
+    public void appleLogin(
+            @RequestParam(required = false) String redirectUri,
+            HttpServletRequest request,
+            HttpServletResponse response) throws IOException {
+        redirectUriResolver.remember(request, response, redirectUri);
+        response.sendRedirect("/oauth2/authorization/apple");
+    }
+
     // 소셜 로그인 1회용 코드 → 토큰 교환
     @PostMapping("/oauth/token")
     public ApiResponse<TokenResponse> exchangeOAuthCode(

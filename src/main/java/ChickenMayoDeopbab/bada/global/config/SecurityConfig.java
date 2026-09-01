@@ -4,6 +4,7 @@ import ChickenMayoDeopbab.bada.domain.auth.exception.AuthStatusCode;
 import ChickenMayoDeopbab.bada.domain.auth.handler.OAuth2LoginFailureHandler;
 import ChickenMayoDeopbab.bada.domain.auth.handler.OAuth2LoginSuccessHandler;
 import ChickenMayoDeopbab.bada.domain.auth.service.CustomOauth2UserService;
+import ChickenMayoDeopbab.bada.domain.auth.service.CustomOidcUserService;
 import ChickenMayoDeopbab.bada.global.common.ApiResponse;
 import ChickenMayoDeopbab.bada.global.common.ErrorResponse;
 import ChickenMayoDeopbab.bada.global.jwt.JwtAuthenticationFilter;
@@ -22,6 +23,8 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.client.endpoint.OAuth2AccessTokenResponseClient;
+import org.springframework.security.oauth2.client.endpoint.OAuth2AuthorizationCodeGrantRequest;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -39,6 +42,8 @@ public class SecurityConfig {
     private final MemberDetailsService memberDetailsService;
     private final ObjectMapper objectMapper;
     private final CustomOauth2UserService customOauth2UserService;
+    private final CustomOidcUserService customOidcUserService;
+    private final OAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest> accessTokenResponseClient;
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
     private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
 
@@ -65,7 +70,11 @@ public class SecurityConfig {
                 )
                 .oauth2Login(oauth2 -> oauth2
                         .userInfoEndpoint(userInfo -> userInfo
-                                .userService(customOauth2UserService))
+                                .userService(customOauth2UserService)
+                                // 애플은 UserInfo 엔드포인트가 없어 OIDC(id_token) 경로를 탄다.
+                                .oidcUserService(customOidcUserService))
+                        .tokenEndpoint(token -> token
+                                .accessTokenResponseClient(accessTokenResponseClient))
                         .successHandler(oAuth2LoginSuccessHandler)
                         .failureHandler(oAuth2LoginFailureHandler)
         )

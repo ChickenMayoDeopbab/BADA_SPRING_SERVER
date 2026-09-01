@@ -25,6 +25,7 @@ public final class PublicEndpoints {
     public static final String[] GET = {
             "/api/v1/auth/google",
             "/api/v1/auth/naver",
+            "/api/v1/auth/apple",
             "/api/diagnosis/questions"
     };
 
