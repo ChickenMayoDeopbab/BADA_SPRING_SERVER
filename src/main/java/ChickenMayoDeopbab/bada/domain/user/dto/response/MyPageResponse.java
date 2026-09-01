@@ -9,6 +9,7 @@ import java.time.LocalDate;
 public record MyPageResponse(
         String username,
         String email,
+        String name,
         String s3Key,
         CallPhobiaLevel level,
         String levelName,
@@ -21,6 +22,7 @@ public record MyPageResponse(
         return new MyPageResponse(
                 user.getUsername(),
                 user.getEmail(),
+                user.getName(),
                 user.getProfileImage(),
                 result.getLevel(),
                 result.getLevel().getName(),

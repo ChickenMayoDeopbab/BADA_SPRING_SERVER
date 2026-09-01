@@ -68,6 +68,13 @@ dependencies {
 	// AWS S3 (SDK v2 — IAM Role/DefaultCredentialsProvider)
 	implementation platform('software.amazon.awssdk:bom:2.28.0')
 	implementation 'software.amazon.awssdk:s3'
+
+	// Firebase Cloud Messaging
+	implementation 'com.google.firebase:firebase-admin:9.10.0'
+}
+
+tasks.named('processResources') {
+	exclude 'bada-firebase-service-account.json'
 }
 
 tasks.named('test') {

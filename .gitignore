@@ -41,3 +41,5 @@ src/main/resources/application-local.properties
 .DS_Store
 
 .records
+
+**/bada-firebase-service-account.json

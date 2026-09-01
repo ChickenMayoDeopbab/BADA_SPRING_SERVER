@@ -3,6 +3,11 @@ package ChickenMayoDeopbab.bada.domain.trainingrecord.service;
 import ChickenMayoDeopbab.bada.domain.callanxiety.repository.CallAnxietyStateRepository;
 import ChickenMayoDeopbab.bada.domain.callanxiety.service.CallAnxietyScoreCalculator;
 import ChickenMayoDeopbab.bada.domain.file.service.FileService;
+import ChickenMayoDeopbab.bada.domain.session.enums.EndReason;
+import ChickenMayoDeopbab.bada.domain.session.enums.SessionType;
+import ChickenMayoDeopbab.bada.domain.session.model.GoodSegment;
+import ChickenMayoDeopbab.bada.domain.session.model.TranscriptTurn;
+import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.FeedbackResponse;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingRecord;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.exception.TrainingRecordStatusCode;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.port.FeedbackCleanupPort;
@@ -17,9 +22,12 @@ import org.mockito.InOrder;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -175,5 +183,113 @@ class TrainingRecordServiceTest {
         service.deleteAllByUser(user);
 
         verify(trainingRecordRepository).deleteAll(records);
+    }
+
+    private static final String TRANSCRIPT_JSON = """
+            [
+              {"role":"user","text":"여보세요"},
+              {"role":"assistant","text":"네, 안녕하세요"}
+            ]
+            """;
+
+    private static final String GOOD_SEGMENTS_JSON = """
+            [
+              {"start":1.5,"end":3.0,"good_point":"인사를 또렷하게 했어요"}
+            ]
+            """;
+
+    private TrainingRecord feedbackRecord(String transcript, String goodSegments, String recordingKey) {
+        return TrainingRecord.builder()
+                .user(user)
+                .sessionId("sess-1")
+                .scenarioId(10L)
+                .scenarioName("병원 예약 전화")
+                .sessionType(SessionType.SCENARIO)
+                .endReason(EndReason.SCENARIO_DONE)
+                .startedAt(LocalDateTime.of(2026, 1, 1, 10, 0, 0))
+                .endedAt(LocalDateTime.of(2026, 1, 1, 10, 1, 30))
+                .durationSeconds(90L)
+                .transcript(transcript)
+                .goodSegments(goodSegments)
+                .recordingKey(recordingKey)
+                .build();
+    }
+
+    private void loginForFeedback(TrainingRecord found) {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("junha", null));
+        when(usersRepository.findByUsername("junha")).thenReturn(Optional.of(user));
+        when(trainingRecordRepository.findFirstByScenarioIdAndUserOrderByEndedAtDesc(10L, user))
+                .thenReturn(Optional.ofNullable(found));
+    }
+
+    @Test
+    void feedbackReturnsParsedTranscriptWithOtherFields() {
+        loginForFeedback(feedbackRecord(TRANSCRIPT_JSON, GOOD_SEGMENTS_JSON, "recordings/sess-1.wav"));
+        when(fileService.generatePresignedUrl("recordings/sess-1.wav")).thenReturn("https://s3/sess-1.wav");
+
+        FeedbackResponse response = service.getFeedback(10L);
+
+        assertThat(response.sessionType()).isEqualTo(SessionType.SCENARIO);
+        assertThat(response.scenarioName()).isEqualTo("병원 예약 전화");
+        assertThat(response.trainingTime()).isEqualTo(LocalTime.of(0, 1, 30));
+        assertThat(response.recordingUrl()).isEqualTo("https://s3/sess-1.wav");
+        assertThat(response.goodSegments())
+                .containsExactly(new GoodSegment(1.5, 3.0, "인사를 또렷하게 했어요"));
+        assertThat(response.transcript()).containsExactly(
+                new TranscriptTurn("user", "여보세요"),
+                new TranscriptTurn("assistant", "네, 안녕하세요")
+        );
+    }
+
+    @Test
+    void feedbackReturnsEmptyTranscriptWhenTranscriptIsNull() {
+        loginForFeedback(feedbackRecord(null, GOOD_SEGMENTS_JSON, null));
+
+        FeedbackResponse response = service.getFeedback(10L);
+
+        assertThat(response.transcript()).isEmpty();
+        assertThat(response.goodSegments()).hasSize(1);
+    }
+
+    @Test
+    void feedbackReturnsEmptyTranscriptWhenTranscriptIsBlankOrNullLiteral() {
+        loginForFeedback(feedbackRecord("   ", null, null));
+        assertThat(service.getFeedback(10L).transcript()).isEmpty();
+
+        loginForFeedback(feedbackRecord("null", null, null));
+        assertThat(service.getFeedback(10L).transcript()).isEmpty();
+    }
+
+    @Test
+    void feedbackWithoutRecordingKeyReturnsNullUrlAndSkipsPresign() {
+        loginForFeedback(feedbackRecord(TRANSCRIPT_JSON, GOOD_SEGMENTS_JSON, null));
+
+        FeedbackResponse response = service.getFeedback(10L);
+
+        assertThat(response.recordingUrl()).isNull();
+        assertThat(response.transcript()).hasSize(2);
+        verify(fileService, never()).generatePresignedUrl(anyString());
+    }
+
+    @Test
+    void feedbackWithBrokenTranscriptJsonThrowsIllegalState() {
+        loginForFeedback(feedbackRecord("{not-json", GOOD_SEGMENTS_JSON, null));
+
+        assertThatThrownBy(() -> service.getFeedback(10L))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("훈련 기록 JSON 파싱에 실패했습니다.");
+    }
+
+    @Test
+    void feedbackWithoutRecordThrowsNotFound() {
+        loginForFeedback(null);
+
+        assertThatThrownBy(() -> service.getFeedback(10L))
+                .isInstanceOf(ApplicationException.class)
+                .extracting(ex -> ((ApplicationException) ex).getStatusCode())
+                .isEqualTo(TrainingRecordStatusCode.RECORD_NOT_FOUND);
+
+        verifyNoInteractions(fileService);
     }
 }
