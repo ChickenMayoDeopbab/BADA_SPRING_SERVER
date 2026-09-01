@@ -70,13 +70,29 @@ class OAuthRedirectUriResolverTest {
     }
 
     @Test
-    void 쿠키는_HttpOnly와_SameSite_Lax로_내려간다() {
+    void 평문_HTTP에서는_HttpOnly와_SameSite_Lax로_내려간다() {
         MockHttpServletResponse response = new MockHttpServletResponse();
         resolver.remember(new MockHttpServletRequest(), response, WEB_URI);
 
+        // None은 Secure가 필수라 평문에서는 물러선다. 구글·네이버는 GET 리다이렉트라 Lax로 충분하다.
         assertThat(response.getHeader(HttpHeaders.SET_COOKIE))
                 .contains("HttpOnly")
                 .contains("SameSite=Lax");
+    }
+
+    @Test
+    void HTTPS에서는_SameSite_None으로_내려간다() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setSecure(true);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        resolver.remember(request, response, WEB_URI);
+
+        // 애플은 콜백을 form_post(cross-site POST)로 보내므로 Lax면 쿠키가 실리지 않아
+        // 복귀 주소를 잃고 앱 딥링크로 잘못 되돌아간다.
+        assertThat(response.getHeader(HttpHeaders.SET_COOKIE))
+                .contains("HttpOnly")
+                .contains("SameSite=None")
+                .contains("Secure");
     }
 
     @Test

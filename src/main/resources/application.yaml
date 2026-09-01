@@ -97,3 +97,10 @@ app:
 
 server:
   forward-headers-strategy: framework
+  servlet:
+    session:
+      cookie:
+        # 공급자가 콜백을 form_post(= cross-site POST)로 보내면 SameSite=Lax인 세션 쿠키는
+        # 실리지 않아 authorization request를 찾지 못한다. None은 Secure가 필수다(=HTTPS 전제).
+        same-site: none
+        secure: true

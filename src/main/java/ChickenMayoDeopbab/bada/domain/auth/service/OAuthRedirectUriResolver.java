@@ -82,7 +82,9 @@ public class OAuthRedirectUriResolver {
                 .path("/")
                 .httpOnly(true)
                 .secure(secure)
-                .sameSite("Lax")
+                // 애플은 콜백을 form_post(= cross-site POST)로 보내는데 Lax는 cross-site POST에
+                // 쿠키를 싣지 않는다. None은 Secure가 필수라 평문 HTTP에서는 Lax로 물러선다.
+                .sameSite(secure ? "None" : "Lax")
                 .maxAge(maxAge)
                 .build();
 
