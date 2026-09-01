@@ -61,6 +61,10 @@ public class NotificationSetting {
         return allEnabled && trainingEnabled;
     }
 
+    public boolean allowsCommunityNotification() {
+        return allEnabled && communityEnabled;
+    }
+
     public void update(
             boolean allEnabled,
             boolean communityEnabled,
