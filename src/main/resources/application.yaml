@@ -94,5 +94,9 @@ app:
   internal:
     secret: ${INTERNAL_SECRET}
 
+  firebase:
+    enabled: ${FIREBASE_ENABLED:false}
+    project-id: ${FIREBASE_PROJECT_ID:bada-23d9b}
+
 server:
   forward-headers-strategy: framework
