@@ -1,9 +1,9 @@
-package ChickenMayoDeopbab.bada.domain.trainingcallschedule.port;
+package ChickenMayoDeopbab.bada.domain.notification.port;
 
 import ChickenMayoDeopbab.bada.domain.notification.entity.PushDevice;
-import ChickenMayoDeopbab.bada.domain.notification.repository.NotificationSettingRepository;
+import ChickenMayoDeopbab.bada.domain.notification.model.PushMessage;
 import ChickenMayoDeopbab.bada.domain.notification.repository.PushDeviceRepository;
-import ChickenMayoDeopbab.bada.domain.trainingcallschedule.entity.TrainingCallSchedule;
+import ChickenMayoDeopbab.bada.domain.user.entity.Users;
 import com.google.firebase.messaging.BatchResponse;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
@@ -23,72 +23,58 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 @ConditionalOnProperty(name = "app.firebase.enabled", havingValue = "true")
-public class FirebasePushNotificationAdapter implements PushNotificationPort {
-
-    private static final String TITLE = "바다";
-    private static final String BODY = "훈련 전화가 왔습니다.";
-    private static final String NOTIFICATION_TYPE = "TRAINING_CALL";
+public class FirebasePushMessageSender implements PushMessageSender {
 
     private final FirebaseMessaging firebaseMessaging;
     private final PushDeviceRepository pushDeviceRepository;
-    private final NotificationSettingRepository notificationSettingRepository;
 
     @Override
-    public void notifyIncomingCall(TrainingCallSchedule schedule) {
-        Long userId = schedule.getUser().getUserId();
-        if (!allowsTrainingNotification(userId)) {
-            log.info("훈련 알림 설정 비활성화로 발송 생략 scheduleId={} userId={}", schedule.getScheduleId(), userId);
-            return;
-        }
-
-        List<PushDevice> devices = pushDeviceRepository.findAllByUser(schedule.getUser());
+    public void send(Users recipient, PushMessage pushMessage) {
+        List<PushDevice> devices = pushDeviceRepository.findAllByUser(recipient);
         if (devices.isEmpty()) {
-            log.info("등록된 푸시 기기가 없어 훈련 알림 발송 생략 scheduleId={} userId={}", schedule.getScheduleId(), userId);
+            log.info(
+                    "등록된 푸시 기기가 없어 알림 발송 생략 userId={} notificationType={}",
+                    recipient.getUserId(),
+                    pushMessage.data().get("notificationType")
+            );
             return;
         }
 
         List<Message> messages = devices.stream()
-                .map(device -> createMessage(device, schedule))
+                .map(device -> createMessage(device, pushMessage))
                 .toList();
 
         try {
             BatchResponse response = firebaseMessaging.sendEach(messages);
             removeUnregisteredDevices(devices, response.getResponses());
             log.info(
-                    "훈련 알림 발송 완료 scheduleId={} userId={} successCount={} failureCount={}",
-                    schedule.getScheduleId(),
-                    userId,
+                    "푸시 알림 발송 완료 userId={} notificationType={} successCount={} failureCount={}",
+                    recipient.getUserId(),
+                    pushMessage.data().get("notificationType"),
                     response.getSuccessCount(),
                     response.getFailureCount()
             );
         } catch (FirebaseMessagingException e) {
-            // 푸시 제공자 장애가 이미 생성된 훈련 세션과 예약 상태를 롤백시키지 않게 한다.
+            // 푸시 제공자 장애가 알림을 요청한 비즈니스 트랜잭션을 롤백시키지 않게 한다.
             log.error(
-                    "훈련 알림 일괄 발송 실패 scheduleId={} userId={} errorCode={}",
-                    schedule.getScheduleId(),
-                    userId,
+                    "푸시 알림 일괄 발송 실패 userId={} notificationType={} errorCode={}",
+                    recipient.getUserId(),
+                    pushMessage.data().get("notificationType"),
                     e.getMessagingErrorCode()
             );
         }
     }
 
-    private boolean allowsTrainingNotification(Long userId) {
-        return notificationSettingRepository.findById(userId)
-                .map(setting -> setting.allowsTrainingNotification())
-                .orElse(true);
-    }
-
     @SuppressWarnings("deprecation")
-    private Message createMessage(PushDevice device, TrainingCallSchedule schedule) {
+    private Message createMessage(PushDevice device, PushMessage pushMessage) {
         // 현재 앱 계약은 FCM registration token 기반이다. 앱이 FID를 전달할 때 setFid로 함께 전환한다.
         return Message.builder()
                 .setToken(device.getToken())
                 .setNotification(Notification.builder()
-                        .setTitle(TITLE)
-                        .setBody(BODY)
+                        .setTitle(pushMessage.title())
+                        .setBody(pushMessage.body())
                         .build())
-                .putData("notificationType", NOTIFICATION_TYPE)
-                .putData("scheduleId", String.valueOf(schedule.getScheduleId()))
+                .putAllData(pushMessage.data())
                 .build();
     }
 
