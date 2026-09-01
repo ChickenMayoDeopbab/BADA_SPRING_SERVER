@@ -34,6 +34,21 @@ class PublicEndpointsTest {
     }
 
     @Test
+    void 애플_진입점과_콜백이_열려_있다() {
+        assertThat(isPublic("GET", "/api/v1/auth/apple")).isTrue();
+        assertThat(isPublic("GET", "/oauth2/authorization/apple")).isTrue();
+        // 애플은 콜백을 form_post로 보내므로 POST도 통과해야 한다.
+        assertThat(isPublic("POST", "/login/oauth2/code/apple")).isTrue();
+    }
+
+    @Test
+    void 애플_추가가_다른_경로를_열지_않았다() {
+        assertThat(isPublic("POST", "/api/v1/auth/apple")).isFalse();
+        assertThat(isPublic("GET", "/api/v1/auth/withdraw")).isFalse();
+        assertThat(isPublic("GET", "/api/v1/users/mypage")).isFalse();
+    }
+
+    @Test
     void 파일_API는_인증을_요구한다() {
         assertThat(isPublic("POST", "/api/v1/file")).isFalse();
         assertThat(isPublic("POST", "/api/v1/file/upload")).isFalse();
