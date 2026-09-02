@@ -15,6 +15,14 @@ public record CallAnxietySummaryResponse(
         BigDecimal averageCurrentIndex,
         BigDecimal averageScoreChange,
         long levelImprovedUserCount,
-        BigDecimal levelImprovementRate
+        BigDecimal levelImprovementRate,
+        String selfAssessmentVersion,
+        long reassessedUserCount,
+        long selfReportEligibleUserCount,
+        long selfReportImprovedUserCount,
+        BigDecimal selfReportImprovementRate,
+        BigDecimal averageInitialSelfReportScore,
+        BigDecimal averageLatestSelfReportScore,
+        BigDecimal averageSelfReportScoreChange
 ) {
 }
