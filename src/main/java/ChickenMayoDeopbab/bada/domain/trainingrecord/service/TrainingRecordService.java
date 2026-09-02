@@ -16,6 +16,7 @@ import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingRecord;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.exception.TrainingRecordStatusCode;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.port.FeedbackCleanupPort;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.repository.TrainingRecordRepository;
+import ChickenMayoDeopbab.bada.domain.trainingrecord.repository.projection.ScenarioCategoryProjection;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
 import ChickenMayoDeopbab.bada.domain.user.exception.UsersStatusCode;
 import ChickenMayoDeopbab.bada.domain.user.repository.UsersRepository;
@@ -33,7 +34,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -50,6 +54,13 @@ public class TrainingRecordService {
     private final FeedbackCleanupPort feedbackCleanupPort;
     private final CallAnxietyStateRepository callAnxietyStateRepository;
     private final CallAnxietyScoreCalculator callAnxietyScoreCalculator;
+    private static final String OTHER_CATEGORY = "other";
+    private static final Map<String, String> CATEGORY_ICON_KEYS = Map.of(
+            "work", "scenario_profile/9c59b8ee-46d0-4207-bed0-ab7136104fef",
+            "daily", "scenario_profile/0c11a382-99b6-457d-80c1-4c00915c5e6c",
+            "school", "scenario_profile/78b33292-2156-4665-86b7-80e0ca3535d5",
+            OTHER_CATEGORY, "scenario_profile/29bdac11-0f65-4689-8ad8-f64d06f3d7b6"
+    );
     private static final Set<SessionType> SCORE_SUPPORTED_TYPES = Set.of(SessionType.SCENARIO, SessionType.CUSTOM);
     private static final Set<EndReason> SCORE_ALLOWED_END_REASONS =
             Set.of(
@@ -63,8 +74,66 @@ public class TrainingRecordService {
 
     public Page<TrainingRecordResponse> getTrainingRecords(Pageable pageable) {
         Users user = getUserInfo();
-        return trainingRecordRepository.findByUserOrderByStartedAtDesc(user, pageable)
-                .map(TrainingRecordResponse::from);
+        Page<TrainingRecord> records =
+                trainingRecordRepository.findByUserOrderByStartedAtDesc(user, pageable);
+        Map<Long, String> iconUrlsByScenarioId = resolveCategoryIconUrls(records.getContent());
+
+        return records.map(record -> TrainingRecordResponse.from(
+                record,
+                iconUrlsByScenarioId.get(record.getScenarioId())
+        ));
+    }
+
+    private Map<Long, String> resolveCategoryIconUrls(List<TrainingRecord> records) {
+        Set<Long> scenarioIds = new HashSet<>();
+        for (TrainingRecord record : records) {
+            if (record.getScenarioId() != null) {
+                scenarioIds.add(record.getScenarioId());
+            }
+        }
+        if (scenarioIds.isEmpty()) {
+            return Map.of();
+        }
+
+        List<ScenarioCategoryProjection> categories;
+        try {
+            categories = trainingRecordRepository.findScenarioCategoriesByIds(scenarioIds);
+        } catch (Exception e) {
+            log.warn("훈련 기록 카테고리 조회 실패, 아이콘 없이 응답 scenarioIds={}", scenarioIds, e);
+            return Map.of();
+        }
+
+        Map<String, String> signedUrlsByKey = new HashMap<>();
+        Map<Long, String> iconUrlsByScenarioId = new HashMap<>();
+        for (ScenarioCategoryProjection category : categories) {
+            String categoryName = category.getCategory();
+            String key = categoryName == null
+                    ? CATEGORY_ICON_KEYS.get(OTHER_CATEGORY)
+                    : CATEGORY_ICON_KEYS.getOrDefault(
+                            categoryName,
+                            CATEGORY_ICON_KEYS.get(OTHER_CATEGORY)
+                    );
+            String url = resolveCategoryIconUrl(key, signedUrlsByKey);
+            if (url != null) {
+                iconUrlsByScenarioId.put(category.getScenarioId(), url);
+            }
+        }
+        return iconUrlsByScenarioId;
+    }
+
+    private String resolveCategoryIconUrl(String key, Map<String, String> signedUrlsByKey) {
+        if (signedUrlsByKey.containsKey(key)) {
+            return signedUrlsByKey.get(key);
+        }
+
+        String url = null;
+        try {
+            url = fileService.generatePresignedUrl(key);
+        } catch (Exception e) {
+            log.warn("카테고리 아이콘 URL 서명 실패, 아이콘 없이 응답 s3Key={}", key, e);
+        }
+        signedUrlsByKey.put(key, url);
+        return url;
     }
 
     public TrainingRecordDetailResponse getTrainingRecord(Long recordId) {
