@@ -13,9 +13,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface DiagnosisResultRepository extends JpaRepository<DiagnosisResult, Integer> {
-    Optional<DiagnosisResult> findFirstByUserOrderByCreatedAtDescQuestionIdDesc(
-            Users user
-    );
 
     @Query("""
         select new ChickenMayoDeopbab.bada.domain.adminstatistics.model.SelfAssessmentStatisticsRow(
@@ -34,6 +31,8 @@ public interface DiagnosisResultRepository extends JpaRepository<DiagnosisResult
     List<SelfAssessmentStatisticsRow> findAllForAdminStatistics(
             @Param("type") DiagnosisType type
     );
+
+    Optional<DiagnosisResult> findFirstByUserOrderByCreatedAtDesc(Users user);
 
     @Modifying(flushAutomatically = true)
     @Query("delete from DiagnosisResult d where d.user = :user")

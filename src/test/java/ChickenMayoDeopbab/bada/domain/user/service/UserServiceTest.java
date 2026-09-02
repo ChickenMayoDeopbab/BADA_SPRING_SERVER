@@ -5,10 +5,12 @@ import ChickenMayoDeopbab.bada.domain.attendance.repository.AttendanceRepository
 import ChickenMayoDeopbab.bada.domain.callanxiety.repository.CallAnxietyStateRepository;
 import ChickenMayoDeopbab.bada.domain.diagnosis.entity.CallPhobiaLevel;
 import ChickenMayoDeopbab.bada.domain.diagnosis.entity.DiagnosisResult;
+import ChickenMayoDeopbab.bada.domain.diagnosis.exception.DiagnosisResultStatusCode;
 import ChickenMayoDeopbab.bada.domain.diagnosis.repository.DiagnosisResultRepository;
 import ChickenMayoDeopbab.bada.domain.trainingcallschedule.repository.TrainingCallScheduleRepository;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.repository.TrainingRecordRepository;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.service.TrainingRecordService;
+import ChickenMayoDeopbab.bada.domain.user.dto.response.MyPageResponse;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
 import ChickenMayoDeopbab.bada.domain.user.exception.UsersStatusCode;
 import ChickenMayoDeopbab.bada.domain.user.repository.UsersRepository;
@@ -21,9 +23,12 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -131,27 +136,33 @@ class UserServiceTest {
     }
 
     @Test
-    void myPageLoadsLatestSelfAssessment() {
+    void myPageReadsTheMostRecentDiagnosisResultWhenTheUserHasSeveral() {
         login();
+        DiagnosisResult latest = DiagnosisResult.builder()
+                .user(user)
+                .level(CallPhobiaLevel.LEVEL_2)
+                .score(2.5)
+                .updatedAt(LocalDateTime.of(2026, 9, 1, 10, 0))
+                .build();
+        when(diagnosisResultRepository.findFirstByUserOrderByCreatedAtDesc(user))
+                .thenReturn(Optional.of(latest));
 
-        DiagnosisResult latestResult = mock(DiagnosisResult.class);
+        MyPageResponse response = service.myPage().data();
 
-        when(
-                diagnosisResultRepository
-                        .findFirstByUserOrderByCreatedAtDescQuestionIdDesc(
-                                user
-                        )
-        ).thenReturn(Optional.of(latestResult));
+        assertThat(response.level()).isEqualTo(CallPhobiaLevel.LEVEL_2);
+        assertThat(response.score()).isEqualTo(2.5);
+        assertThat(response.diagnosisDate()).isEqualTo(LocalDate.of(2026, 9, 1));
+    }
 
-        when(latestResult.getLevel())
-                .thenReturn(CallPhobiaLevel.LEVEL_2);
+    @Test
+    void myPageWithoutAnyDiagnosisResultThrowsNotFound() {
+        login();
+        when(diagnosisResultRepository.findFirstByUserOrderByCreatedAtDesc(user))
+                .thenReturn(Optional.empty());
 
-        when(latestResult.getUpdatedAt())
-                .thenReturn(LocalDateTime.of(2026, 8, 20, 12, 0));
-
-        service.myPage();
-
-        verify(diagnosisResultRepository)
-                .findFirstByUserOrderByCreatedAtDescQuestionIdDesc(user);
+        assertThatThrownBy(service::myPage)
+                .isInstanceOf(ApplicationException.class)
+                .extracting(ex -> ((ApplicationException) ex).getStatusCode())
+                .isEqualTo(DiagnosisResultStatusCode.DIAGNOSIS_RESULT_NOT_FOUND);
     }
 }
