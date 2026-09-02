@@ -67,7 +67,8 @@ public class UserService {
 
     public ApiResponse<MyPageResponse> myPage() {
         Users user = getUserInfo();
-        DiagnosisResult diagnosisResult = diagnosisResultRepository.findByUser(user)
+        DiagnosisResult diagnosisResult = diagnosisResultRepository
+                .findFirstByUserOrderByCreatedAtDescQuestionIdDesc(user)
                 .orElseThrow(() -> new ApplicationException(DiagnosisResultStatusCode.DIAGNOSIS_RESULT_NOT_FOUND));
         int totalTraining = trainingRecordRepository.countByUser(user);
         int attendanceCount = attendanceQueryRepository.getTotalAttendance(user);
