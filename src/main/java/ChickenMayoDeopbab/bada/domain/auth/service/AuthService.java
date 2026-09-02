@@ -66,8 +66,9 @@ public class AuthService {
             HttpServletResponse response) {
         String refreshToken = redisTemplate.opsForValue().get("refreshToken: " + request.userId());
 
-        if ( refreshToken == null || !refreshToken.equals(request.refreshToken())) {
-            redisTemplate.delete("refreshToken: " + request.userId());
+        // 검증에 실패한 요청이 상태를 바꾸면 안 된다. 여기서 저장된 토큰을 지우면
+        // userId만 아는 제3자가 아무 문자열이나 보내 남의 세션을 끊을 수 있다.
+        if (refreshToken == null || !refreshToken.equals(request.refreshToken())) {
             throw new ApplicationException(AuthStatusCode.INVALID_REFRESH_TOKEN);
         }
         Users user = getUser(request.userId());

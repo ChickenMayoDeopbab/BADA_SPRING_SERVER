@@ -15,6 +15,7 @@ public enum AuthStatusCode implements StatusCode {
     ALREADY_EXIST_USERNAME(HttpStatus.CONFLICT, "Auth-005", "이미 존재하는 아이디입니다."),
     INVALID_OAUTH_CODE(HttpStatus.UNAUTHORIZED, "Auth-006", "유효하지 않거나 만료된 소셜 로그인 코드입니다."),
     UNAUTHENTICATED(HttpStatus.UNAUTHORIZED, "Auth-007", "인증이 필요합니다."),
+    UNSUPPORTED_REDIRECT_URI(HttpStatus.BAD_REQUEST, "Auth-008", "허용되지 않은 리다이렉트 주소입니다."),
     ;
     private final HttpStatus httpStatus;
     private final String code;

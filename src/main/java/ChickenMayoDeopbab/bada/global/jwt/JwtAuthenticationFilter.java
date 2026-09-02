@@ -2,6 +2,7 @@ package ChickenMayoDeopbab.bada.global.jwt;
 
 import ChickenMayoDeopbab.bada.global.common.ApiResponse;
 import ChickenMayoDeopbab.bada.global.common.ErrorResponse;
+import ChickenMayoDeopbab.bada.global.config.PublicEndpoints;
 import ChickenMayoDeopbab.bada.global.exception.ApplicationException;
 import ChickenMayoDeopbab.bada.global.exception.statuscode.JwtStatusCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -17,7 +18,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Set;
 
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -25,25 +25,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtProvider jwtProvider;
     private final MemberDetailsService memberDetailsService;
 
-    // 인증 없이 접근하는 경로. 만료된 accessToken 쿠키가 남아 있어도 401로 끊기지 않아야 한다.
-    private static final Set<String> PUBLIC_PATHS = Set.of(
-            "/api/v1/auth/signup",
-            "/api/v1/auth/login",
-            "/api/v1/auth/refresh",
-            "/api/v1/auth/check/username",
-            "/api/v1/auth/email/send",
-            "/api/v1/auth/email/check",
-            "/api/v1/auth/oauth/token",
-            "/api/v1/auth/google",
-            "/api/v1/auth/naver"
-    );
-
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getRequestURI();
-        return path.startsWith("/oauth2/")
-                || path.startsWith("/login/oauth2/")
-                || PUBLIC_PATHS.contains(path);
+        return PublicEndpoints.matches(request);
     }
 
     @Override

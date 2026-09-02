@@ -4,6 +4,7 @@ import ChickenMayoDeopbab.bada.domain.auth.exception.AuthStatusCode;
 import ChickenMayoDeopbab.bada.domain.auth.handler.OAuth2LoginFailureHandler;
 import ChickenMayoDeopbab.bada.domain.auth.handler.OAuth2LoginSuccessHandler;
 import ChickenMayoDeopbab.bada.domain.auth.service.CustomOauth2UserService;
+import ChickenMayoDeopbab.bada.domain.auth.service.CustomOidcUserService;
 import ChickenMayoDeopbab.bada.global.common.ApiResponse;
 import ChickenMayoDeopbab.bada.global.common.ErrorResponse;
 import ChickenMayoDeopbab.bada.global.jwt.JwtAuthenticationFilter;
@@ -22,6 +23,8 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.client.endpoint.OAuth2AccessTokenResponseClient;
+import org.springframework.security.oauth2.client.endpoint.OAuth2AuthorizationCodeGrantRequest;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -39,6 +42,8 @@ public class SecurityConfig {
     private final MemberDetailsService memberDetailsService;
     private final ObjectMapper objectMapper;
     private final CustomOauth2UserService customOauth2UserService;
+    private final CustomOidcUserService customOidcUserService;
+    private final OAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest> accessTokenResponseClient;
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
     private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
 
@@ -57,41 +62,19 @@ public class SecurityConfig {
                 .logout(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.POST,
-                                "/api/v1/auth/signup",
-                                "/api/v1/auth/login",
-                                "/api/v1/auth/refresh",
-                                "/api/v1/auth/email/send",
-                                "/api/v1/auth/email/check",
-                                "/api/v1/auth/check/username",
-                                "/api/v1/auth/oauth/token",
-                                "api/diagnosis/submit",
-                                "/api/v1/file"  // TODO(임시/테스트용): S3 업로드 확인용. 검증 후 제거.
-                        ).permitAll()
-                        .requestMatchers(HttpMethod.GET,
-                                "/api/v1/auth/google",
-                                "/api/v1/auth/naver",
-                                "/api/diagnosis/questions"
-                        ).permitAll()
-                        .requestMatchers(
-                                "/",
-                                "/css/**",
-                                "images/**",
-                                "/js/**",
-                                "/login/**",
-                                "/oauth2/**",
-                                "/logout/*",
-                                "/posts/**",
-                                "/comments/**"
-                        ).permitAll()
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
-                        .requestMatchers("/internal/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, PublicEndpoints.POST).permitAll()
+                        .requestMatchers(HttpMethod.GET, PublicEndpoints.GET).permitAll()
+                        .requestMatchers(PublicEndpoints.ANY).permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
                         .userInfoEndpoint(userInfo -> userInfo
-                                .userService(customOauth2UserService))
+                                .userService(customOauth2UserService)
+                                // 애플은 UserInfo 엔드포인트가 없어 OIDC(id_token) 경로를 탄다.
+                                .oidcUserService(customOidcUserService))
+                        .tokenEndpoint(token -> token
+                                .accessTokenResponseClient(accessTokenResponseClient))
                         .successHandler(oAuth2LoginSuccessHandler)
                         .failureHandler(oAuth2LoginFailureHandler)
         )

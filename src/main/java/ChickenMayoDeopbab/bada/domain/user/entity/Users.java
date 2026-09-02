@@ -32,7 +32,7 @@ public class Users {
     @Column(length = 50)
     private String name;
 
-    @Column(nullable = false)
+    // 소셜 로그인은 이메일이 없을 수 있다(네이버 선택 동의 거부, 애플 이메일 가리기 등).
     private String email;
 
     private String profileImage;

@@ -1,6 +1,7 @@
 package ChickenMayoDeopbab.bada.domain.auth.handler;
 
 import ChickenMayoDeopbab.bada.domain.auth.service.AuthService;
+import ChickenMayoDeopbab.bada.domain.auth.service.OAuthRedirectUriResolver;
 import ChickenMayoDeopbab.bada.domain.user.entity.Provider;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
 import ChickenMayoDeopbab.bada.domain.user.exception.UsersStatusCode;
@@ -10,7 +11,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -29,27 +29,27 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
     private final AuthService authService;
     private final UsersRepository usersRepository;
+    private final OAuthRedirectUriResolver redirectUriResolver;
 
     private final RedirectStrategy redirectStrategy = new DefaultRedirectStrategy();
-
-    @Value("${app.oauth2.app-redirect-uri}")
-    private String appRedirectUri;
 
     @Override
     public void onAuthenticationSuccess(
             HttpServletRequest request,
             HttpServletResponse response,
             Authentication authentication) throws IOException {
+        String redirectUri = redirectUriResolver.consume(request, response);
+
         String code;
         try {
             code = issueCode(authentication);
         } catch (Exception e) {
             log.error("소셜 로그인 후처리에 실패했습니다.", e);
-            redirectStrategy.sendRedirect(request, response, buildRedirectUrl("error", "login_failed"));
+            redirectStrategy.sendRedirect(request, response, buildRedirectUrl(redirectUri, "error", "login_failed"));
             return;
         }
 
-        redirectStrategy.sendRedirect(request, response, buildRedirectUrl("code", code));
+        redirectStrategy.sendRedirect(request, response, buildRedirectUrl(redirectUri, "code", code));
     }
 
     private String issueCode(Authentication authentication) {
@@ -66,8 +66,8 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         return authService.issueOAuthCode(user.getUserId());
     }
 
-    private String buildRedirectUrl(String paramName, String paramValue) {
-        return UriComponentsBuilder.fromUriString(appRedirectUri)
+    private String buildRedirectUrl(String redirectUri, String paramName, String paramValue) {
+        return UriComponentsBuilder.fromUriString(redirectUri)
                 .queryParam(paramName, paramValue)
                 .build()
                 .toUriString();
