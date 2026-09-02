@@ -2,10 +2,14 @@ package ChickenMayoDeopbab.bada.domain.adminstatistics.service;
 
 import ChickenMayoDeopbab.bada.domain.adminstatistics.dto.response.CallAnxietySummaryResponse;
 import ChickenMayoDeopbab.bada.domain.adminstatistics.model.AppliedTrainingStatisticsRow;
+import ChickenMayoDeopbab.bada.domain.adminstatistics.model.AppliedTrainingTimelineRow;
 import ChickenMayoDeopbab.bada.domain.adminstatistics.model.CallAnxietyCsvExport;
 import ChickenMayoDeopbab.bada.domain.adminstatistics.model.CallAnxietyStateStatisticsRow;
+import ChickenMayoDeopbab.bada.domain.adminstatistics.model.SelfAssessmentStatisticsRow;
 import ChickenMayoDeopbab.bada.domain.callanxiety.repository.CallAnxietyStateRepository;
 import ChickenMayoDeopbab.bada.domain.diagnosis.entity.CallPhobiaLevel;
+import ChickenMayoDeopbab.bada.domain.diagnosis.entity.DiagnosisType;
+import ChickenMayoDeopbab.bada.domain.diagnosis.repository.DiagnosisResultRepository;
 import ChickenMayoDeopbab.bada.domain.session.enums.AiPersonality;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.repository.TrainingRecordRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,6 +18,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,6 +33,9 @@ class AdminCallAnxietyStatisticsServiceTest {
     private TrainingRecordRepository
             trainingRecordRepository;
 
+    private DiagnosisResultRepository
+            diagnosisResultRepository;
+
     private AdminCallAnxietyStatisticsService service;
 
     @BeforeEach
@@ -38,9 +46,26 @@ class AdminCallAnxietyStatisticsServiceTest {
         trainingRecordRepository =
                 mock(TrainingRecordRepository.class);
 
+        diagnosisResultRepository =
+                mock(DiagnosisResultRepository.class);
+
+        when(
+                diagnosisResultRepository.findAllForAdminStatistics(
+                        DiagnosisType.SIGNUP
+                )
+        ).thenReturn(List.of());
+
+        when(
+                trainingRecordRepository
+                        .findAllAppliedTimelinesForAdminStatistics(
+                                "CALL_ANXIETY_V1"
+                        )
+        ).thenReturn(List.of());
+
         service = new AdminCallAnxietyStatisticsService(
                 callAnxietyStateRepository,
                 trainingRecordRepository,
+                diagnosisResultRepository,
                 new ObjectMapper()
         );
     }
@@ -170,6 +195,113 @@ class AdminCallAnxietyStatisticsServiceTest {
 
         assertThat(result.levelImprovementRate())
                 .isNull();
+
+        assertThat(result.selfReportImprovementRate())
+                .isNull();
+
+        assertThat(result.averageInitialSelfReportScore())
+                .isNull();
+
+        assertThat(result.averageLatestSelfReportScore())
+                .isNull();
+
+        assertThat(result.averageSelfReportScoreChange())
+                .isNull();
+    }
+
+    @Test
+    void calculatesSelfReportImprovementUsingTrainingsBetweenAssessments() {
+        when(
+                callAnxietyStateRepository
+                        .findAllForAdminStatistics()
+        ).thenReturn(List.of(
+                state(
+                        1L,
+                        "4.0000",
+                        "3.5000",
+                        CallPhobiaLevel.LEVEL_4,
+                        CallPhobiaLevel.LEVEL_3,
+                        3
+                ),
+                state(
+                        2L,
+                        "3.0000",
+                        "3.2000",
+                        CallPhobiaLevel.LEVEL_3,
+                        CallPhobiaLevel.LEVEL_3,
+                        3
+                ),
+                state(
+                        3L,
+                        "4.0000",
+                        "3.0000",
+                        CallPhobiaLevel.LEVEL_4,
+                        CallPhobiaLevel.LEVEL_3,
+                        3
+                )
+        ));
+
+        when(
+                trainingRecordRepository
+                        .findAllAppliedForAdminStatistics()
+        ).thenReturn(List.of());
+
+        when(
+                diagnosisResultRepository.findAllForAdminStatistics(
+                        DiagnosisType.SIGNUP
+                )
+        ).thenReturn(List.of(
+                assessment(1L, 1L, 4.0, 1),
+                assessment(2L, 1L, 3.5, 10),
+                assessment(3L, 2L, 3.0, 1),
+                assessment(4L, 2L, 3.2, 10),
+                assessment(5L, 3L, 4.0, 1),
+                assessment(6L, 3L, 3.0, 10)
+        ));
+
+        when(
+                trainingRecordRepository
+                        .findAllAppliedTimelinesForAdminStatistics(
+                                "CALL_ANXIETY_V1"
+                        )
+        ).thenReturn(List.of(
+                timeline(1L, 2),
+                timeline(1L, 3),
+                timeline(1L, 4),
+                timeline(2L, 2),
+                timeline(2L, 3),
+                timeline(2L, 4),
+                timeline(3L, 0),
+                timeline(3L, 5),
+                timeline(3L, 11)
+        ));
+
+        CallAnxietySummaryResponse result =
+                service.getSummary();
+
+        assertThat(result.selfAssessmentVersion())
+                .isEqualTo("SELF_ASSESSMENT_V1");
+
+        assertThat(result.reassessedUserCount())
+                .isEqualTo(3);
+
+        assertThat(result.selfReportEligibleUserCount())
+                .isEqualTo(2);
+
+        assertThat(result.selfReportImprovedUserCount())
+                .isEqualTo(1);
+
+        assertThat(result.selfReportImprovementRate())
+                .isEqualByComparingTo("50.00");
+
+        assertThat(result.averageInitialSelfReportScore())
+                .isEqualByComparingTo("3.50");
+
+        assertThat(result.averageLatestSelfReportScore())
+                .isEqualByComparingTo("3.35");
+
+        assertThat(result.averageSelfReportScoreChange())
+                .isEqualByComparingTo("0.15");
     }
 
     @Test
@@ -282,6 +414,11 @@ class AdminCallAnxietyStatisticsServiceTest {
         assertThat(csv).doesNotContain("name");
         assertThat(csv).doesNotContain("email");
 
+        assertThat(csv).contains(
+                "selfAssessmentVersion,selfAssessmentCount,"
+                        + "firstSelfReportScore,latestSelfReportScore"
+        );
+
         assertThat(export.fileName())
                 .startsWith("call-anxiety-statistics-")
                 .endsWith(".csv");
@@ -333,6 +470,32 @@ class AdminCallAnxietyStatisticsServiceTest {
                 scoringVersion,
                 new BigDecimal(trainingStateIndex),
                 scoreSequence
+        );
+    }
+
+    private SelfAssessmentStatisticsRow assessment(
+            Long resultId,
+            Long userId,
+            double score,
+            int day
+    ) {
+        return new SelfAssessmentStatisticsRow(
+                resultId,
+                userId,
+                score,
+                LocalDateTime.of(2026, 8, 1, 12, 0)
+                        .plusDays(day)
+        );
+    }
+
+    private AppliedTrainingTimelineRow timeline(
+            Long userId,
+            int day
+    ) {
+        return new AppliedTrainingTimelineRow(
+                userId,
+                LocalDateTime.of(2026, 8, 1, 12, 0)
+                        .plusDays(day)
         );
     }
 }

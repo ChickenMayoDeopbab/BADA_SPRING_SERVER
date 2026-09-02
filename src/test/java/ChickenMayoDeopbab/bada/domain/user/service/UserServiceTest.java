@@ -3,6 +3,8 @@ package ChickenMayoDeopbab.bada.domain.user.service;
 import ChickenMayoDeopbab.bada.domain.attendance.repository.AttendanceQueryRepository;
 import ChickenMayoDeopbab.bada.domain.attendance.repository.AttendanceRepository;
 import ChickenMayoDeopbab.bada.domain.callanxiety.repository.CallAnxietyStateRepository;
+import ChickenMayoDeopbab.bada.domain.diagnosis.entity.CallPhobiaLevel;
+import ChickenMayoDeopbab.bada.domain.diagnosis.entity.DiagnosisResult;
 import ChickenMayoDeopbab.bada.domain.diagnosis.repository.DiagnosisResultRepository;
 import ChickenMayoDeopbab.bada.domain.trainingcallschedule.repository.TrainingCallScheduleRepository;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.repository.TrainingRecordRepository;
@@ -19,6 +21,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -125,5 +128,30 @@ class UserServiceTest {
                 diagnosisResultRepository
         );
         verify(redisTemplate, never()).delete(anyString());
+    }
+
+    @Test
+    void myPageLoadsLatestSelfAssessment() {
+        login();
+
+        DiagnosisResult latestResult = mock(DiagnosisResult.class);
+
+        when(
+                diagnosisResultRepository
+                        .findFirstByUserOrderByCreatedAtDescQuestionIdDesc(
+                                user
+                        )
+        ).thenReturn(Optional.of(latestResult));
+
+        when(latestResult.getLevel())
+                .thenReturn(CallPhobiaLevel.LEVEL_2);
+
+        when(latestResult.getUpdatedAt())
+                .thenReturn(LocalDateTime.of(2026, 8, 20, 12, 0));
+
+        service.myPage();
+
+        verify(diagnosisResultRepository)
+                .findFirstByUserOrderByCreatedAtDescQuestionIdDesc(user);
     }
 }
