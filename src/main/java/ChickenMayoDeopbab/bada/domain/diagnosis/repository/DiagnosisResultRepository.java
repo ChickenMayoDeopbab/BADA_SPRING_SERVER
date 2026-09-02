@@ -10,7 +10,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 
 public interface DiagnosisResultRepository extends JpaRepository<DiagnosisResult, Integer> {
-    Optional<DiagnosisResult> findByUser(Users user);
+    Optional<DiagnosisResult> findFirstByUserOrderByCreatedAtDesc(Users user);
 
     @Modifying(flushAutomatically = true)
     @Query("delete from DiagnosisResult d where d.user = :user")
