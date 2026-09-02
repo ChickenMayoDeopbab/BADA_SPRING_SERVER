@@ -3,6 +3,7 @@ package ChickenMayoDeopbab.bada.domain.trainingrecord.repository;
 import ChickenMayoDeopbab.bada.domain.adminstatistics.model.AppliedTrainingStatisticsRow;
 import ChickenMayoDeopbab.bada.domain.session.enums.EndReason;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingRecord;
+import ChickenMayoDeopbab.bada.domain.trainingrecord.repository.projection.ScenarioCategoryProjection;
 import ChickenMayoDeopbab.bada.domain.user.entity.Role;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
 import jakarta.persistence.LockModeType;
@@ -25,6 +26,16 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
     Optional<TrainingRecord> findByRecordIdAndUser(Long recordId, Users user);
 
     Page<TrainingRecord> findByUserOrderByStartedAtDesc(Users user, Pageable pageable);
+
+    @Query(value = """
+        select scenario_id as scenarioId,
+               category as category
+        from scenario
+        where scenario_id in (:scenarioIds)
+        """, nativeQuery = true)
+    List<ScenarioCategoryProjection> findScenarioCategoriesByIds(
+            @Param("scenarioIds") Collection<Long> scenarioIds
+    );
 
     Optional<TrainingRecord> findFirstByScenarioIdAndUserOrderByEndedAtDesc(Long scenarioId, Users user);
 

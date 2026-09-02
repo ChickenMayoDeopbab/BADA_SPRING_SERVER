@@ -8,10 +8,12 @@ import ChickenMayoDeopbab.bada.domain.session.enums.SessionType;
 import ChickenMayoDeopbab.bada.domain.session.model.GoodSegment;
 import ChickenMayoDeopbab.bada.domain.session.model.TranscriptTurn;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.FeedbackResponse;
+import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.TrainingRecordResponse;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingRecord;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.exception.TrainingRecordStatusCode;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.port.FeedbackCleanupPort;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.repository.TrainingRecordRepository;
+import ChickenMayoDeopbab.bada.domain.trainingrecord.repository.projection.ScenarioCategoryProjection;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
 import ChickenMayoDeopbab.bada.domain.user.repository.UsersRepository;
 import ChickenMayoDeopbab.bada.global.exception.ApplicationException;
@@ -19,6 +21,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -30,11 +35,13 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -82,6 +89,122 @@ class TrainingRecordServiceTest {
         when(usersRepository.findByUsername("junha")).thenReturn(Optional.of(user));
         when(trainingRecordRepository.findByRecordIdAndUser(1L, user))
                 .thenReturn(Optional.ofNullable(found));
+    }
+
+    private void loginForList() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("junha", null));
+        when(usersRepository.findByUsername("junha")).thenReturn(Optional.of(user));
+    }
+
+    private TrainingRecord listRecord(Long scenarioId, String scenarioName) {
+        return TrainingRecord.builder()
+                .user(user)
+                .sessionId("sess-" + scenarioId)
+                .scenarioId(scenarioId)
+                .scenarioName(scenarioName)
+                .sessionType(SessionType.SCENARIO)
+                .startedAt(LocalDateTime.of(2026, 9, 1, 10, 0))
+                .durationSeconds(60L)
+                .build();
+    }
+
+    private ScenarioCategoryProjection category(Long scenarioId, String category) {
+        ScenarioCategoryProjection projection = mock(ScenarioCategoryProjection.class);
+        when(projection.getScenarioId()).thenReturn(scenarioId);
+        when(projection.getCategory()).thenReturn(category);
+        return projection;
+    }
+
+    @Test
+    void trainingRecordsReturnCategoryIconUrlsWithoutDuplicateSigning() {
+        loginForList();
+        PageRequest pageable = PageRequest.of(0, 20);
+        List<TrainingRecord> records = List.of(
+                listRecord(10L, "업무 문의하기"),
+                listRecord(11L, "병원 예약하기"),
+                listRecord(12L, "배달 문의하기"),
+                listRecord(13L, "학교 문의하기"),
+                listRecord(14L, "기타 문의하기")
+        );
+        when(trainingRecordRepository.findByUserOrderByStartedAtDesc(user, pageable))
+                .thenReturn(new PageImpl<>(records, pageable, records.size()));
+        ScenarioCategoryProjection workCategory = category(10L, "work");
+        ScenarioCategoryProjection firstDailyCategory = category(11L, "daily");
+        ScenarioCategoryProjection secondDailyCategory = category(12L, "daily");
+        ScenarioCategoryProjection schoolCategory = category(13L, "school");
+        ScenarioCategoryProjection otherCategory = category(14L, "other");
+        when(trainingRecordRepository.findScenarioCategoriesByIds(anyCollection()))
+                .thenReturn(List.of(
+                        workCategory,
+                        firstDailyCategory,
+                        secondDailyCategory,
+                        schoolCategory,
+                        otherCategory
+                ));
+        when(fileService.generatePresignedUrl(
+                "scenario_profile/9c59b8ee-46d0-4207-bed0-ab7136104fef"
+        )).thenReturn("https://s3/work.svg");
+        when(fileService.generatePresignedUrl(
+                "scenario_profile/0c11a382-99b6-457d-80c1-4c00915c5e6c"
+        )).thenReturn("https://s3/daily.svg");
+        when(fileService.generatePresignedUrl(
+                "scenario_profile/78b33292-2156-4665-86b7-80e0ca3535d5"
+        )).thenReturn("https://s3/school.svg");
+        when(fileService.generatePresignedUrl(
+                "scenario_profile/29bdac11-0f65-4689-8ad8-f64d06f3d7b6"
+        )).thenReturn("https://s3/other.svg");
+
+        Page<TrainingRecordResponse> response = service.getTrainingRecords(pageable);
+
+        assertThat(response.getContent())
+                .extracting(TrainingRecordResponse::categoryIconUrl)
+                .containsExactly(
+                        "https://s3/work.svg",
+                        "https://s3/daily.svg",
+                        "https://s3/daily.svg",
+                        "https://s3/school.svg",
+                        "https://s3/other.svg"
+                );
+        verify(fileService, times(4)).generatePresignedUrl(anyString());
+        verify(fileService, times(1)).generatePresignedUrl(
+                "scenario_profile/0c11a382-99b6-457d-80c1-4c00915c5e6c"
+        );
+    }
+
+    @Test
+    void unknownCategoryUsesOtherIcon() {
+        loginForList();
+        PageRequest pageable = PageRequest.of(0, 20);
+        TrainingRecord record = listRecord(10L, "기타 문의하기");
+        when(trainingRecordRepository.findByUserOrderByStartedAtDesc(user, pageable))
+                .thenReturn(new PageImpl<>(List.of(record), pageable, 1));
+        ScenarioCategoryProjection unknownCategory = category(10L, "legacy-category");
+        when(trainingRecordRepository.findScenarioCategoriesByIds(anyCollection()))
+                .thenReturn(List.of(unknownCategory));
+        when(fileService.generatePresignedUrl(
+                "scenario_profile/29bdac11-0f65-4689-8ad8-f64d06f3d7b6"
+        )).thenReturn("https://s3/other.svg");
+
+        TrainingRecordResponse response = service.getTrainingRecords(pageable).getContent().getFirst();
+
+        assertThat(response.categoryIconUrl()).isEqualTo("https://s3/other.svg");
+    }
+
+    @Test
+    void categoryLookupFailureKeepsTrainingRecordsAvailable() {
+        loginForList();
+        PageRequest pageable = PageRequest.of(0, 20);
+        TrainingRecord record = listRecord(10L, "병원 예약하기");
+        when(trainingRecordRepository.findByUserOrderByStartedAtDesc(user, pageable))
+                .thenReturn(new PageImpl<>(List.of(record), pageable, 1));
+        when(trainingRecordRepository.findScenarioCategoriesByIds(anyCollection()))
+                .thenThrow(new RuntimeException("query failed"));
+
+        TrainingRecordResponse response = service.getTrainingRecords(pageable).getContent().getFirst();
+
+        assertThat(response.categoryIconUrl()).isNull();
+        verifyNoInteractions(fileService);
     }
 
     @Test

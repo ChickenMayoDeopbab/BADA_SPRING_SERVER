@@ -11,16 +11,18 @@ public record TrainingRecordResponse(
         LocalDateTime trainedAt,
         String scenarioName,
         SessionType sessionType,
-        Long durationSeconds
+        Long durationSeconds,
+        String categoryIconUrl
 ) {
-    public static TrainingRecordResponse from(TrainingRecord record) {
+    public static TrainingRecordResponse from(TrainingRecord record, String categoryIconUrl) {
         return new TrainingRecordResponse(
                 record.getRecordId(),
                 record.getSessionId(),
                 record.getStartedAt(),
                 record.getScenarioName(),
                 record.getSessionType(),
-                record.getDurationSeconds()
+                record.getDurationSeconds(),
+                categoryIconUrl
         );
     }
 }
