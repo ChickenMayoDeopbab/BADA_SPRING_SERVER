@@ -1,6 +1,7 @@
 package ChickenMayoDeopbab.bada.domain.trainingrecord.repository;
 
 import ChickenMayoDeopbab.bada.domain.adminstatistics.model.AppliedTrainingStatisticsRow;
+import ChickenMayoDeopbab.bada.domain.adminstatistics.model.AppliedTrainingTimelineRow;
 import ChickenMayoDeopbab.bada.domain.session.enums.EndReason;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingRecord;
 import ChickenMayoDeopbab.bada.domain.user.entity.Role;
@@ -53,6 +54,22 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
                  training.scoreSequence desc
         """)
     List<AppliedTrainingStatisticsRow> findAllAppliedForAdminStatistics();
+
+    @Query("""
+        select new ChickenMayoDeopbab.bada.domain.adminstatistics.model.AppliedTrainingTimelineRow(
+            training.user.userId,
+            training.scoreAppliedAt
+        )
+        from TrainingRecord training
+        where training.scoreApplied = true
+          and training.scoreAppliedAt is not null
+          and training.scoringVersion = :scoringVersion
+        order by training.user.userId asc,
+                 training.scoreAppliedAt asc
+        """)
+    List<AppliedTrainingTimelineRow> findAllAppliedTimelinesForAdminStatistics(
+            @Param("scoringVersion") String scoringVersion
+    );
 
     @Query("""
         select count(distinct training.user.userId)

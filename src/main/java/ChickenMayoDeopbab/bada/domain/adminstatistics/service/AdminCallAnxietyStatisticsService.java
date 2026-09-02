@@ -2,11 +2,15 @@ package ChickenMayoDeopbab.bada.domain.adminstatistics.service;
 
 import ChickenMayoDeopbab.bada.domain.adminstatistics.dto.response.CallAnxietySummaryResponse;
 import ChickenMayoDeopbab.bada.domain.adminstatistics.model.AppliedTrainingStatisticsRow;
+import ChickenMayoDeopbab.bada.domain.adminstatistics.model.AppliedTrainingTimelineRow;
 import ChickenMayoDeopbab.bada.domain.adminstatistics.model.CallAnxietyCsvExport;
 import ChickenMayoDeopbab.bada.domain.adminstatistics.model.CallAnxietyStateStatisticsRow;
+import ChickenMayoDeopbab.bada.domain.adminstatistics.model.SelfAssessmentStatisticsRow;
 import ChickenMayoDeopbab.bada.domain.callanxiety.entity.CallAnxietyState;
 import ChickenMayoDeopbab.bada.domain.callanxiety.repository.CallAnxietyStateRepository;
 import ChickenMayoDeopbab.bada.domain.diagnosis.entity.CallPhobiaLevel;
+import ChickenMayoDeopbab.bada.domain.diagnosis.entity.DiagnosisType;
+import ChickenMayoDeopbab.bada.domain.diagnosis.repository.DiagnosisResultRepository;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.repository.TrainingRecordRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -17,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -36,6 +41,7 @@ public class AdminCallAnxietyStatisticsService {
     private static final DateTimeFormatter FILE_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
     private final CallAnxietyStateRepository callAnxietyStateRepository;
     private final TrainingRecordRepository trainingRecordRepository;
+    private final DiagnosisResultRepository diagnosisResultRepository;
     private final ObjectMapper objectMapper;
 
     @Transactional(readOnly = true)
@@ -44,6 +50,9 @@ public class AdminCallAnxietyStatisticsService {
 
         List<UserStatistics> userStatistics =
                 loadUserStatistics();
+
+        List<SelfReportStatistics> selfReportStatistics =
+                loadSelfReportStatistics(userStatistics);
 
         long totalUserCount = userStatistics.size();
 
@@ -98,6 +107,48 @@ public class AdminCallAnxietyStatisticsService {
                         eligibleUserCount
                 );
 
+        List<SelfReportStatistics> selfReportEligibleUsers =
+                selfReportStatistics.stream()
+                        .filter(SelfReportStatistics::eligible)
+                        .toList();
+
+        long reassessedUserCount =
+                selfReportStatistics.stream()
+                        .filter(SelfReportStatistics::reassessed)
+                        .count();
+
+        long selfReportEligibleUserCount =
+                selfReportEligibleUsers.size();
+
+        long selfReportImprovedUserCount =
+                selfReportEligibleUsers.stream()
+                        .filter(SelfReportStatistics::improved)
+                        .count();
+
+        BigDecimal selfReportImprovementRate =
+                calculateImprovementRate(
+                        selfReportImprovedUserCount,
+                        selfReportEligibleUserCount
+                );
+
+        BigDecimal averageInitialSelfReportScore =
+                calculateAverageSelfReportScore(
+                        selfReportEligibleUsers,
+                        SelfReportStatistics::firstScore
+                );
+
+        BigDecimal averageLatestSelfReportScore =
+                calculateAverageSelfReportScore(
+                        selfReportEligibleUsers,
+                        SelfReportStatistics::latestScore
+                );
+
+        BigDecimal averageSelfReportScoreChange =
+                calculateAverageSelfReportScore(
+                        selfReportEligibleUsers,
+                        SelfReportStatistics::scoreChange
+                );
+
         return new CallAnxietySummaryResponse(
                 generatedAt,
                 SCOPE,
@@ -110,7 +161,15 @@ public class AdminCallAnxietyStatisticsService {
                 averageCurrentIndex,
                 averageScoreChange,
                 levelImprovedUserCount,
-                levelImprovementRate
+                levelImprovementRate,
+                CallAnxietyState.SELF_ASSESSMENT_VERSION,
+                reassessedUserCount,
+                selfReportEligibleUserCount,
+                selfReportImprovedUserCount,
+                selfReportImprovementRate,
+                averageInitialSelfReportScore,
+                averageLatestSelfReportScore,
+                averageSelfReportScoreChange
         );
     }
 
@@ -120,6 +179,13 @@ public class AdminCallAnxietyStatisticsService {
 
         List<UserStatistics> userStatistics =
                 loadUserStatistics();
+
+        Map<Long, SelfReportStatistics> selfReportsByUser =
+                loadSelfReportStatistics(userStatistics).stream()
+                        .collect(Collectors.toMap(
+                                SelfReportStatistics::userId,
+                                Function.identity()
+                        ));
 
         StringBuilder csv = new StringBuilder();
 
@@ -137,12 +203,23 @@ public class AdminCallAnxietyStatisticsService {
                 "difficultyDistribution",
                 "personalityDistribution",
                 "analyzerVersions",
-                "scoringVersions"
+                "scoringVersions",
+                "selfAssessmentVersion",
+                "selfAssessmentCount",
+                "firstSelfReportScore",
+                "latestSelfReportScore",
+                "selfReportScoreChange",
+                "validTrainingCountBetweenAssessments",
+                "selfReportEligible",
+                "selfReportImproved"
         );
 
         for (UserStatistics statistics : userStatistics) {
             CallAnxietyStateStatisticsRow state =
                     statistics.state();
+
+            SelfReportStatistics selfReport =
+                    selfReportsByUser.get(state.userId());
 
             appendCsvRow(
                     csv,
@@ -176,7 +253,17 @@ public class AdminCallAnxietyStatisticsService {
                                     statistics.appliedTrainings(),
                                     AppliedTrainingStatisticsRow::scoringVersion
                             )
-                    )
+                    ),
+                    CallAnxietyState.SELF_ASSESSMENT_VERSION,
+                    String.valueOf(selfReport.assessmentCount()),
+                    formatScore(selfReport.firstScore()),
+                    formatScore(selfReport.latestScore()),
+                    formatScore(selfReport.scoreChange()),
+                    String.valueOf(
+                            selfReport.validTrainingCountBetweenAssessments()
+                    ),
+                    String.valueOf(selfReport.eligible()),
+                    String.valueOf(selfReport.improved())
             );
         }
 
@@ -273,6 +360,138 @@ public class AdminCallAnxietyStatisticsService {
         return result;
     }
 
+    private List<SelfReportStatistics> loadSelfReportStatistics(
+            List<UserStatistics> userStatistics
+    ) {
+        List<SelfAssessmentStatisticsRow> assessments =
+                diagnosisResultRepository.findAllForAdminStatistics(
+                        DiagnosisType.SIGNUP
+                );
+
+        Map<Long, List<SelfAssessmentStatisticsRow>> assessmentsByUser =
+                assessments.stream()
+                        .collect(Collectors.groupingBy(
+                                SelfAssessmentStatisticsRow::userId
+                        ));
+
+        List<AppliedTrainingTimelineRow> appliedTimelines =
+                trainingRecordRepository
+                        .findAllAppliedTimelinesForAdminStatistics(
+                                CallAnxietyState.SCORING_VERSION
+                        );
+
+        Map<Long, List<LocalDateTime>> appliedTimesByUser =
+                appliedTimelines.stream()
+                        .collect(Collectors.groupingBy(
+                                AppliedTrainingTimelineRow::userId,
+                                Collectors.mapping(
+                                        AppliedTrainingTimelineRow::scoreAppliedAt,
+                                        Collectors.toList()
+                                )
+                        ));
+
+        List<SelfReportStatistics> result = new ArrayList<>();
+
+        for (UserStatistics statistics : userStatistics) {
+            Long userId = statistics.state().userId();
+
+            List<SelfAssessmentStatisticsRow> userAssessments =
+                    new ArrayList<>(
+                            assessmentsByUser.getOrDefault(
+                                    userId,
+                                    List.of()
+                            )
+                    );
+
+            userAssessments.sort(
+                    Comparator.comparing(
+                            SelfAssessmentStatisticsRow::assessedAt
+                    ).thenComparing(
+                            SelfAssessmentStatisticsRow::resultId
+                    )
+            );
+
+            result.add(calculateSelfReportStatistics(
+                    userId,
+                    userAssessments,
+                    appliedTimesByUser.getOrDefault(
+                            userId,
+                            List.of()
+                    )
+            ));
+        }
+
+        return result;
+    }
+
+    private SelfReportStatistics calculateSelfReportStatistics(
+            Long userId,
+            List<SelfAssessmentStatisticsRow> assessments,
+            List<LocalDateTime> appliedTimes
+    ) {
+        if (assessments.isEmpty()) {
+            return new SelfReportStatistics(
+                    userId,
+                    0,
+                    null,
+                    null,
+                    null,
+                    0,
+                    false,
+                    false,
+                    false
+            );
+        }
+
+        SelfAssessmentStatisticsRow first = assessments.getFirst();
+        SelfAssessmentStatisticsRow latest = assessments.getLast();
+
+        BigDecimal firstScore = normalizeScore(
+                BigDecimal.valueOf(first.score())
+        );
+
+        BigDecimal latestScore = normalizeScore(
+                BigDecimal.valueOf(latest.score())
+        );
+
+        boolean reassessed = assessments.size() >= 2;
+
+        BigDecimal scoreChange = reassessed
+                ? normalizeScore(firstScore.subtract(latestScore))
+                : null;
+
+        long validTrainingCountBetweenAssessments = reassessed
+                ? appliedTimes.stream()
+                .filter(Objects::nonNull)
+                .filter(appliedAt ->
+                        appliedAt.isAfter(first.assessedAt())
+                                && !appliedAt.isAfter(latest.assessedAt())
+                )
+                .count()
+                : 0;
+
+        boolean eligible =
+                reassessed
+                        && validTrainingCountBetweenAssessments
+                        >= MIN_VALID_TRAINING_COUNT;
+
+        boolean improved =
+                eligible
+                        && scoreChange.compareTo(MIN_IMPROVEMENT) >= 0;
+
+        return new SelfReportStatistics(
+                userId,
+                assessments.size(),
+                firstScore,
+                latestScore,
+                scoreChange,
+                validTrainingCountBetweenAssessments,
+                reassessed,
+                eligible,
+                improved
+        );
+    }
+
     private BigDecimal calculateRecentThreeAverage(
             CallAnxietyStateStatisticsRow state,
             List<AppliedTrainingStatisticsRow> trainings
@@ -341,6 +560,29 @@ public class AdminCallAnxietyStatisticsService {
     private BigDecimal calculateAverageScore(
             List<UserStatistics> eligibleUsers,
             Function<UserStatistics, BigDecimal> scoreExtractor
+    ) {
+        if (eligibleUsers.isEmpty()) {
+            return null;
+        }
+
+        BigDecimal total =
+                eligibleUsers.stream()
+                        .map(scoreExtractor)
+                        .reduce(
+                                BigDecimal.ZERO,
+                                BigDecimal::add
+                        );
+
+        return total.divide(
+                BigDecimal.valueOf(eligibleUsers.size()),
+                SUMMARY_SCALE,
+                RoundingMode.HALF_UP
+        );
+    }
+
+    private BigDecimal calculateAverageSelfReportScore(
+            List<SelfReportStatistics> eligibleUsers,
+            Function<SelfReportStatistics, BigDecimal> scoreExtractor
     ) {
         if (eligibleUsers.isEmpty()) {
             return null;
@@ -509,6 +751,19 @@ public class AdminCallAnxietyStatisticsService {
             boolean eligible,
             boolean improved,
             boolean levelImproved
+    ) {
+    }
+
+    private record SelfReportStatistics(
+            Long userId,
+            int assessmentCount,
+            BigDecimal firstScore,
+            BigDecimal latestScore,
+            BigDecimal scoreChange,
+            long validTrainingCountBetweenAssessments,
+            boolean reassessed,
+            boolean eligible,
+            boolean improved
     ) {
     }
 }
