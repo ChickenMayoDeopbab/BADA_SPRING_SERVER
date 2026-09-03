@@ -65,6 +65,7 @@ public class TrainingRecordService {
     private static final Set<EndReason> SCORE_ALLOWED_END_REASONS =
             Set.of(
                     EndReason.SCENARIO_DONE,
+                    EndReason.USER_END,
                     EndReason.END_CALL,
                     EndReason.TIMEOUT
             );
