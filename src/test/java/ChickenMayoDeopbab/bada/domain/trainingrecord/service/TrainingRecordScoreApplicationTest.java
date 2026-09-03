@@ -194,6 +194,33 @@ class TrainingRecordScoreApplicationTest {
     }
 
     @Test
+    void storesSubjectiveScoreForUserEndedIncompleteTraining() {
+        TrainingRecord record = createRecord(
+                failedAnalysis("INCOMPLETE_TRAINING"),
+                EndReason.USER_END
+        );
+
+        when(trainingRecordRepository.findBySessionIdAndUser(
+                "session-1",
+                user
+        )).thenReturn(Optional.of(record));
+
+        AnxietyScoreResponse response = service.recordAnxietyScore(
+                "session-1",
+                (short) 5
+        );
+
+        assertThat(response.anxietyScore()).isEqualTo((short) 5);
+        assertThat(response.scoreApplied()).isFalse();
+        assertThat(response.scoreExclusionReason())
+                .isEqualTo("INCOMPLETE_TRAINING");
+        assertThat(record.getAnxietyScore()).isEqualTo((short) 5);
+
+        verify(callAnxietyStateRepository, never())
+                .findByUserForUpdate(any());
+    }
+
+    @Test
     void storesSubjectiveScoreWhenInitialStateIsMissing() {
         TrainingRecord record = createRecord(passedAnalysis());
 
@@ -236,6 +263,13 @@ class TrainingRecordScoreApplicationTest {
     private TrainingRecord createRecord(
             TrainingAnalysisMetrics analysis
     ) {
+        return createRecord(analysis, EndReason.SCENARIO_DONE);
+    }
+
+    private TrainingRecord createRecord(
+            TrainingAnalysisMetrics analysis,
+            EndReason endReason
+    ) {
         LocalDateTime now = LocalDateTime.now();
 
         return TrainingRecord.builder()
@@ -246,7 +280,7 @@ class TrainingRecordScoreApplicationTest {
                 .scenarioVersion("SCENARIO_V1")
                 .difficulty("MEDIUM")
                 .sessionType(SessionType.SCENARIO)
-                .endReason(EndReason.SCENARIO_DONE)
+                .endReason(endReason)
                 .startedAt(now.minusMinutes(1))
                 .endedAt(now)
                 .durationSeconds(60L)
@@ -286,6 +320,12 @@ class TrainingRecordScoreApplicationTest {
     }
 
     private TrainingAnalysisMetrics failedAnalysis() {
+        return failedAnalysis("INSUFFICIENT_USER_SPEECH");
+    }
+
+    private TrainingAnalysisMetrics failedAnalysis(
+            String exclusionReason
+    ) {
         return TrainingAnalysisMetrics.from(
                 new TrainingAnalysisRequest(
                         null,
@@ -300,7 +340,7 @@ class TrainingRecordScoreApplicationTest {
                         0,
                         4,
                         AnalysisQualityStatus.FAIL,
-                        "INSUFFICIENT_USER_SPEECH",
+                        exclusionReason,
                         "SPEECH_ANALYZER_V1",
                         "ANALYSIS_POLICY_V1"
                 )
