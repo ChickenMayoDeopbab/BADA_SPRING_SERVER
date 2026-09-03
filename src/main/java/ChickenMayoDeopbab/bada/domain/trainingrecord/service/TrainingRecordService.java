@@ -282,10 +282,21 @@ public class TrainingRecordService {
 
         CallAnxietyState state = callAnxietyStateRepository
                 .findByUserForUpdate(user)
-                .orElseThrow(() -> new ApplicationException(
-                        TrainingRecordStatusCode
-                                .CALL_ANXIETY_STATE_NOT_FOUND
-                ));
+                .orElse(null);
+
+        if (state == null) {
+            // 상태 테이블 도입 전에 가입한 사용자는 초기 상태가 없을 수 있다.
+            // 집계 점수는 제외하되 사용자가 입력한 주관적 불안 점수는 보존한다.
+            log.warn(
+                    "불안 상태 없음 - 주관적 점수만 저장 sessionId={}",
+                    sessionId
+            );
+            return excludeScore(
+                    record,
+                    anxietyScore,
+                    "MISSING_CALL_ANXIETY_STATE"
+            );
+        }
 
         if (!Objects.equals(
                 state.getScoringVersion(),
