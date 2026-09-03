@@ -5,4 +5,6 @@ public interface ScenarioCategoryProjection {
     Long getScenarioId();
 
     String getCategory();
+
+    String getScenarioImage();
 }

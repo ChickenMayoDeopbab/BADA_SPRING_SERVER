@@ -12,9 +12,14 @@ public record TrainingRecordResponse(
         String scenarioName,
         SessionType sessionType,
         Long durationSeconds,
+        String scenarioImage,
         String categoryIconUrl
 ) {
-    public static TrainingRecordResponse from(TrainingRecord record, String categoryIconUrl) {
+    public static TrainingRecordResponse from(
+            TrainingRecord record,
+            String scenarioImage,
+            String categoryIconUrl
+    ) {
         return new TrainingRecordResponse(
                 record.getRecordId(),
                 record.getSessionId(),
@@ -22,6 +27,7 @@ public record TrainingRecordResponse(
                 record.getScenarioName(),
                 record.getSessionType(),
                 record.getDurationSeconds(),
+                scenarioImage,
                 categoryIconUrl
         );
     }

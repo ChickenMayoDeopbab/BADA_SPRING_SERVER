@@ -77,15 +77,23 @@ public class TrainingRecordService {
         Users user = getUserInfo();
         Page<TrainingRecord> records =
                 trainingRecordRepository.findByUserOrderByStartedAtDesc(user, pageable);
-        Map<Long, String> iconUrlsByScenarioId = resolveCategoryIconUrls(records.getContent());
+        Map<Long, ScenarioMediaUrls> mediaUrlsByScenarioId =
+                resolveScenarioMediaUrls(records.getContent());
 
-        return records.map(record -> TrainingRecordResponse.from(
-                record,
-                iconUrlsByScenarioId.get(record.getScenarioId())
-        ));
+        return records.map(record -> {
+            ScenarioMediaUrls mediaUrls = mediaUrlsByScenarioId.getOrDefault(
+                    record.getScenarioId(),
+                    ScenarioMediaUrls.EMPTY
+            );
+            return TrainingRecordResponse.from(
+                    record,
+                    mediaUrls.scenarioImage(),
+                    mediaUrls.categoryIconUrl()
+            );
+        });
     }
 
-    private Map<Long, String> resolveCategoryIconUrls(List<TrainingRecord> records) {
+    private Map<Long, ScenarioMediaUrls> resolveScenarioMediaUrls(List<TrainingRecord> records) {
         Set<Long> scenarioIds = new HashSet<>();
         for (TrainingRecord record : records) {
             if (record.getScenarioId() != null) {
@@ -100,26 +108,47 @@ public class TrainingRecordService {
         try {
             categories = trainingRecordRepository.findScenarioCategoriesByIds(scenarioIds);
         } catch (Exception e) {
-            log.warn("훈련 기록 카테고리 조회 실패, 아이콘 없이 응답 scenarioIds={}", scenarioIds, e);
+            log.warn("훈련 기록 시나리오 미디어 조회 실패, 이미지 없이 응답 scenarioIds={}", scenarioIds, e);
             return Map.of();
         }
 
         Map<String, String> signedUrlsByKey = new HashMap<>();
-        Map<Long, String> iconUrlsByScenarioId = new HashMap<>();
+        Map<Long, ScenarioMediaUrls> mediaUrlsByScenarioId = new HashMap<>();
         for (ScenarioCategoryProjection category : categories) {
             String categoryName = category.getCategory();
-            String key = categoryName == null
+            String iconKey = categoryName == null
                     ? CATEGORY_ICON_KEYS.get(OTHER_CATEGORY)
                     : CATEGORY_ICON_KEYS.getOrDefault(
                             categoryName,
                             CATEGORY_ICON_KEYS.get(OTHER_CATEGORY)
                     );
-            String url = resolveCategoryIconUrl(key, signedUrlsByKey);
-            if (url != null) {
-                iconUrlsByScenarioId.put(category.getScenarioId(), url);
-            }
+            mediaUrlsByScenarioId.put(
+                    category.getScenarioId(),
+                    new ScenarioMediaUrls(
+                            resolveScenarioImageUrl(category.getScenarioImage(), signedUrlsByKey),
+                            resolveCategoryIconUrl(iconKey, signedUrlsByKey)
+                    )
+            );
         }
-        return iconUrlsByScenarioId;
+        return mediaUrlsByScenarioId;
+    }
+
+    private String resolveScenarioImageUrl(String key, Map<String, String> signedUrlsByKey) {
+        if (key == null || key.isBlank()) {
+            return null;
+        }
+        if (signedUrlsByKey.containsKey(key)) {
+            return signedUrlsByKey.get(key);
+        }
+
+        String url = null;
+        try {
+            url = fileService.generatePresignedUrl(key);
+        } catch (Exception e) {
+            log.warn("시나리오 이미지 URL 서명 실패, 이미지 없이 응답 s3Key={}", key, e);
+        }
+        signedUrlsByKey.put(key, url);
+        return url;
     }
 
     private String resolveCategoryIconUrl(String key, Map<String, String> signedUrlsByKey) {
@@ -135,6 +164,11 @@ public class TrainingRecordService {
         }
         signedUrlsByKey.put(key, url);
         return url;
+    }
+
+    private record ScenarioMediaUrls(String scenarioImage, String categoryIconUrl) {
+
+        private static final ScenarioMediaUrls EMPTY = new ScenarioMediaUrls(null, null);
     }
 
     public TrainingRecordDetailResponse getTrainingRecord(Long recordId) {

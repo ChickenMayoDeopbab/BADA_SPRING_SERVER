@@ -109,15 +109,20 @@ class TrainingRecordServiceTest {
                 .build();
     }
 
-    private ScenarioCategoryProjection category(Long scenarioId, String category) {
+    private ScenarioCategoryProjection scenarioMedia(
+            Long scenarioId,
+            String category,
+            String scenarioImage
+    ) {
         ScenarioCategoryProjection projection = mock(ScenarioCategoryProjection.class);
         when(projection.getScenarioId()).thenReturn(scenarioId);
         when(projection.getCategory()).thenReturn(category);
+        when(projection.getScenarioImage()).thenReturn(scenarioImage);
         return projection;
     }
 
     @Test
-    void trainingRecordsReturnCategoryIconUrlsWithoutDuplicateSigning() {
+    void trainingRecordsReturnScenarioImagesAndCategoryIconsSeparately() {
         loginForList();
         PageRequest pageable = PageRequest.of(0, 20);
         List<TrainingRecord> records = List.of(
@@ -129,11 +134,16 @@ class TrainingRecordServiceTest {
         );
         when(trainingRecordRepository.findByUserOrderByStartedAtDesc(user, pageable))
                 .thenReturn(new PageImpl<>(records, pageable, records.size()));
-        ScenarioCategoryProjection workCategory = category(10L, "work");
-        ScenarioCategoryProjection firstDailyCategory = category(11L, "daily");
-        ScenarioCategoryProjection secondDailyCategory = category(12L, "daily");
-        ScenarioCategoryProjection schoolCategory = category(13L, "school");
-        ScenarioCategoryProjection otherCategory = category(14L, "other");
+        ScenarioCategoryProjection workCategory =
+                scenarioMedia(10L, "work", "scenario-images/work.png");
+        ScenarioCategoryProjection firstDailyCategory =
+                scenarioMedia(11L, "daily", "scenario-images/hospital.png");
+        ScenarioCategoryProjection secondDailyCategory =
+                scenarioMedia(12L, "daily", "scenario-images/delivery.png");
+        ScenarioCategoryProjection schoolCategory =
+                scenarioMedia(13L, "school", "scenario-images/school.png");
+        ScenarioCategoryProjection otherCategory =
+                scenarioMedia(14L, "other", "scenario-images/other.png");
         when(trainingRecordRepository.findScenarioCategoriesByIds(anyCollection()))
                 .thenReturn(List.of(
                         workCategory,
@@ -154,9 +164,28 @@ class TrainingRecordServiceTest {
         when(fileService.generatePresignedUrl(
                 "scenario_profile/29bdac11-0f65-4689-8ad8-f64d06f3d7b6"
         )).thenReturn("https://s3/other.svg");
+        when(fileService.generatePresignedUrl("scenario-images/work.png"))
+                .thenReturn("https://s3/work.png");
+        when(fileService.generatePresignedUrl("scenario-images/hospital.png"))
+                .thenReturn("https://s3/hospital.png");
+        when(fileService.generatePresignedUrl("scenario-images/delivery.png"))
+                .thenReturn("https://s3/delivery.png");
+        when(fileService.generatePresignedUrl("scenario-images/school.png"))
+                .thenReturn("https://s3/school.png");
+        when(fileService.generatePresignedUrl("scenario-images/other.png"))
+                .thenReturn("https://s3/other.png");
 
         Page<TrainingRecordResponse> response = service.getTrainingRecords(pageable);
 
+        assertThat(response.getContent())
+                .extracting(TrainingRecordResponse::scenarioImage)
+                .containsExactly(
+                        "https://s3/work.png",
+                        "https://s3/hospital.png",
+                        "https://s3/delivery.png",
+                        "https://s3/school.png",
+                        "https://s3/other.png"
+                );
         assertThat(response.getContent())
                 .extracting(TrainingRecordResponse::categoryIconUrl)
                 .containsExactly(
@@ -166,7 +195,7 @@ class TrainingRecordServiceTest {
                         "https://s3/school.svg",
                         "https://s3/other.svg"
                 );
-        verify(fileService, times(4)).generatePresignedUrl(anyString());
+        verify(fileService, times(9)).generatePresignedUrl(anyString());
         verify(fileService, times(1)).generatePresignedUrl(
                 "scenario_profile/0c11a382-99b6-457d-80c1-4c00915c5e6c"
         );
@@ -179,7 +208,7 @@ class TrainingRecordServiceTest {
         TrainingRecord record = listRecord(10L, "기타 문의하기");
         when(trainingRecordRepository.findByUserOrderByStartedAtDesc(user, pageable))
                 .thenReturn(new PageImpl<>(List.of(record), pageable, 1));
-        ScenarioCategoryProjection unknownCategory = category(10L, "legacy-category");
+        ScenarioCategoryProjection unknownCategory = scenarioMedia(10L, "legacy-category", null);
         when(trainingRecordRepository.findScenarioCategoriesByIds(anyCollection()))
                 .thenReturn(List.of(unknownCategory));
         when(fileService.generatePresignedUrl(
@@ -188,6 +217,7 @@ class TrainingRecordServiceTest {
 
         TrainingRecordResponse response = service.getTrainingRecords(pageable).getContent().getFirst();
 
+        assertThat(response.scenarioImage()).isNull();
         assertThat(response.categoryIconUrl()).isEqualTo("https://s3/other.svg");
     }
 
@@ -203,8 +233,32 @@ class TrainingRecordServiceTest {
 
         TrainingRecordResponse response = service.getTrainingRecords(pageable).getContent().getFirst();
 
+        assertThat(response.scenarioImage()).isNull();
         assertThat(response.categoryIconUrl()).isNull();
         verifyNoInteractions(fileService);
+    }
+
+    @Test
+    void scenarioImageSigningFailureDoesNotHideCategoryIcon() {
+        loginForList();
+        PageRequest pageable = PageRequest.of(0, 20);
+        TrainingRecord record = listRecord(10L, "병원 예약하기");
+        when(trainingRecordRepository.findByUserOrderByStartedAtDesc(user, pageable))
+                .thenReturn(new PageImpl<>(List.of(record), pageable, 1));
+        ScenarioCategoryProjection media =
+                scenarioMedia(10L, "daily", "scenario-images/hospital.png");
+        when(trainingRecordRepository.findScenarioCategoriesByIds(anyCollection()))
+                .thenReturn(List.of(media));
+        when(fileService.generatePresignedUrl("scenario-images/hospital.png"))
+                .thenThrow(new RuntimeException("signature failed"));
+        when(fileService.generatePresignedUrl(
+                "scenario_profile/0c11a382-99b6-457d-80c1-4c00915c5e6c"
+        )).thenReturn("https://s3/daily.svg");
+
+        TrainingRecordResponse response = service.getTrainingRecords(pageable).getContent().getFirst();
+
+        assertThat(response.scenarioImage()).isNull();
+        assertThat(response.categoryIconUrl()).isEqualTo("https://s3/daily.svg");
     }
 
     @Test
