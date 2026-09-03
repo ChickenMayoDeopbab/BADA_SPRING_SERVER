@@ -30,7 +30,8 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
 
     @Query(value = """
         select scenario_id as scenarioId,
-               category as category
+               category as category,
+               scenario_image as scenarioImage
         from scenario
         where scenario_id in (:scenarioIds)
         """, nativeQuery = true)
