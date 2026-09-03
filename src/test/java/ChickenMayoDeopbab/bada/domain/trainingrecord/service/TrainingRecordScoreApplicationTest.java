@@ -194,7 +194,7 @@ class TrainingRecordScoreApplicationTest {
     }
 
     @Test
-    void doesNotRecordScoreWhenInitialStateIsMissing() {
+    void storesSubjectiveScoreWhenInitialStateIsMissing() {
         TrainingRecord record = createRecord(passedAnalysis());
 
         when(trainingRecordRepository.findBySessionIdAndUser(
@@ -205,20 +205,19 @@ class TrainingRecordScoreApplicationTest {
         when(callAnxietyStateRepository.findByUserForUpdate(user))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() ->
-                service.recordAnxietyScore("session-1", (short) 5)
-        )
-                .isInstanceOf(ApplicationException.class)
-                .extracting(exception ->
-                        ((ApplicationException) exception).getStatusCode()
-                )
-                .isEqualTo(
-                        TrainingRecordStatusCode
-                                .CALL_ANXIETY_STATE_NOT_FOUND
-                );
+        AnxietyScoreResponse response = service.recordAnxietyScore(
+                "session-1",
+                (short) 5
+        );
 
-        assertThat(record.getAnxietyScore()).isNull();
+        assertThat(response.anxietyScore()).isEqualTo((short) 5);
+        assertThat(response.scoreApplied()).isFalse();
+        assertThat(response.scoreExclusionReason())
+                .isEqualTo("MISSING_CALL_ANXIETY_STATE");
+        assertThat(record.getAnxietyScore()).isEqualTo((short) 5);
         assertThat(record.getScoreApplied()).isFalse();
+        assertThat(record.getScoreExclusionReason())
+                .isEqualTo("MISSING_CALL_ANXIETY_STATE");
     }
 
     private void mockRecordAndState(
