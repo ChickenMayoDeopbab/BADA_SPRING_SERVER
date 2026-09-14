@@ -1,6 +1,8 @@
 package ChickenMayoDeopbab.bada.domain.user.service;
 
 import ChickenMayoDeopbab.bada.domain.attendance.repository.AttendanceQueryRepository;
+import ChickenMayoDeopbab.bada.domain.auth.enums.AuthEmailType;
+import ChickenMayoDeopbab.bada.domain.auth.service.EmailService;
 import ChickenMayoDeopbab.bada.domain.callanxiety.repository.CallAnxietyStateRepository;
 import ChickenMayoDeopbab.bada.domain.attendance.repository.AttendanceRepository;
 import ChickenMayoDeopbab.bada.domain.diagnosis.entity.DiagnosisResult;
@@ -46,7 +48,7 @@ public class UserService {
         validateEmailVerified(request.email());
 
         usersRepository.save(request.toEntity(bCryptPasswordEncoder.encode(request.password())));
-        redisTemplate.delete(request.email());
+        redisTemplate.delete(AuthEmailType.SIGNUP.redisKey(request.email()));
     }
 
     // users를 FK로 참조하는 자식 데이터를 먼저 정리한 뒤 회원을 삭제한다.
@@ -95,8 +97,8 @@ public class UserService {
 
     // 이메일 인증을 한 사용자인지 검증
     private void validateEmailVerified(String email) {
-        String status = redisTemplate.opsForValue().get(email);
-        if (!"ACCESS".equals(status)) {
+        String status = redisTemplate.opsForValue().get(AuthEmailType.SIGNUP.redisKey(email));
+        if (!EmailService.VERIFIED.equals(status)) {
             throw new ApplicationException(UsersStatusCode.EMAIL_NOT_VERIFIED);
         }
     }
