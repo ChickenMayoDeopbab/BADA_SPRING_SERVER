@@ -5,6 +5,7 @@ import ChickenMayoDeopbab.bada.domain.auth.dto.request.CheckUsernameRequest;
 import ChickenMayoDeopbab.bada.domain.auth.dto.request.LoginRequest;
 import ChickenMayoDeopbab.bada.domain.auth.dto.request.RefreshRequest;
 import ChickenMayoDeopbab.bada.domain.auth.dto.response.TokenResponse;
+import ChickenMayoDeopbab.bada.domain.auth.enums.AuthEmailType;
 import ChickenMayoDeopbab.bada.domain.auth.exception.AuthStatusCode;
 import ChickenMayoDeopbab.bada.domain.user.entity.Provider;
 import ChickenMayoDeopbab.bada.domain.user.entity.Role;
@@ -130,7 +131,7 @@ public class AuthService {
     }
 
     public ApiResponse<String> findId(String email) {
-        validateEmailVerified(email);
+        validateEmailVerified(email, AuthEmailType.FIND_ID);
         Users user = usersRepository.findByEmailAndProvider(email,Provider.LOCAL)
                 .orElseThrow(() -> new ApplicationException(UsersStatusCode.USER_NOT_FOUND));
 
@@ -138,7 +139,7 @@ public class AuthService {
     }
 
     public ApiResponse<?> changePassword(ChangePasswordRequest request) {
-        validateEmailVerified(request.email());
+        validateEmailVerified(request.email(), AuthEmailType.RESET_PASSWORD);
         Users user = usersRepository.findByEmailAndProvider(request.email(), Provider.LOCAL)
                 .orElseThrow(() -> new ApplicationException(UsersStatusCode.USER_NOT_FOUND));
 
@@ -208,9 +209,9 @@ public class AuthService {
                 .orElseThrow(() -> new ApplicationException(UsersStatusCode.USER_NOT_FOUND));
     }
 
-    private void validateEmailVerified(String email) {
-        String status = redisTemplate.opsForValue().get(email);
-        if (!"ACCESS".equals(status)) {
+    private void validateEmailVerified(String email, AuthEmailType type) {
+        String status = redisTemplate.opsForValue().get(type.redisKey(email));
+        if (!EmailService.VERIFIED.equals(status)) {
             throw new ApplicationException(UsersStatusCode.EMAIL_NOT_VERIFIED);
         }
     }

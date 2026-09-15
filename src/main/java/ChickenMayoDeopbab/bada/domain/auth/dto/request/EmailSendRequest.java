@@ -5,12 +5,10 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
-public record EmailVerificationRequest(
+public record EmailSendRequest(
         @NotBlank
         @Email
         String email,
-        @NotNull
-        String authNum,
         @NotNull
         AuthEmailType type
 ) {

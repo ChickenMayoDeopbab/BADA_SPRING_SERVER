@@ -3,6 +3,7 @@ package ChickenMayoDeopbab.bada.domain.auth.controller;
 import ChickenMayoDeopbab.bada.domain.auth.dto.request.ChangePasswordRequest;
 import ChickenMayoDeopbab.bada.domain.auth.dto.request.CheckUsernameRequest;
 import ChickenMayoDeopbab.bada.domain.auth.dto.request.EmailRequest;
+import ChickenMayoDeopbab.bada.domain.auth.dto.request.EmailSendRequest;
 import ChickenMayoDeopbab.bada.domain.auth.dto.request.EmailVerificationRequest;
 import  ChickenMayoDeopbab.bada.domain.auth.dto.request.LoginRequest;
 import ChickenMayoDeopbab.bada.domain.auth.dto.request.OAuthCodeRequest;
@@ -127,8 +128,8 @@ public class AuthController {
     // 이메일 전송
     @PostMapping("/email/send")
     public ApiResponse<?> sendEmail(
-            @RequestBody @Valid EmailRequest requset){
-        emailService.joinEmail(requset.email());
+            @RequestBody @Valid EmailSendRequest request){
+        emailService.joinEmail(request.email(), request.type());
         return ApiResponse.ok("이메일이 전송되었습니다.");
     }
 
@@ -136,7 +137,7 @@ public class AuthController {
     @PostMapping("/email/check")
     public ApiResponse<?> checkEmail(
             @RequestBody @Valid EmailVerificationRequest request) {
-        return emailService.checkEmail(request.email(), request.authNum());
+        return emailService.checkEmail(request.email(), request.authNum(), request.type());
     }
 
     // 비밀번호 변경
