@@ -31,10 +31,14 @@ public class File {
     @Column(name = "s3_key")
     private String s3Key;
 
+    @Column(name = "user_id")
+    private Long userId;
+
     @Builder
-    private File(String title, FileType fileType, String s3Key) {
+    private File(String title, FileType fileType, String s3Key, Long userId) {
         this.title = title;
         this.fileType = fileType;
         this.s3Key = s3Key;
+        this.userId = userId;
     }
 }

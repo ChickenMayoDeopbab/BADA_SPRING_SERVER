@@ -5,9 +5,14 @@ import ChickenMayoDeopbab.bada.domain.file.entity.File;
 import ChickenMayoDeopbab.bada.domain.file.enumeration.FileType;
 import ChickenMayoDeopbab.bada.domain.file.exception.FileStatusCode;
 import ChickenMayoDeopbab.bada.domain.file.repository.FileRepository;
+import ChickenMayoDeopbab.bada.domain.user.entity.Users;
+import ChickenMayoDeopbab.bada.domain.user.exception.UsersStatusCode;
+import ChickenMayoDeopbab.bada.domain.user.repository.UsersRepository;
 import ChickenMayoDeopbab.bada.global.exception.ApplicationException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -31,6 +36,7 @@ public class FileService {
     private final S3Client s3Client;
     private final S3Presigner s3Presigner;
     private final FileRepository fileRepository;
+    private final UsersRepository usersRepository;
 
     @Value("${aws.s3.bucket}")
     private String bucket;
@@ -41,7 +47,11 @@ public class FileService {
         if (multipartFile == null || multipartFile.isEmpty()) {
             throw ApplicationException.of(FileStatusCode.EMPTY_FILE);
         }
+        if (fileType == FileType.COMMUNITY_IMAGE && !isImage(multipartFile)) {
+            throw ApplicationException.of(FileStatusCode.INVALID_IMAGE_TYPE);
+        }
 
+        Users user = getUserInfo();
         String originalFilename = multipartFile.getOriginalFilename();
         String s3Key = generateS3Key(fileType);
 
@@ -51,6 +61,7 @@ public class FileService {
                 .title(originalFilename)
                 .fileType(fileType)
                 .s3Key(s3Key)
+                .userId(user.getUserId())
                 .build());
 
         String url = generatePresignedUrl(s3Key);
@@ -114,5 +125,17 @@ public class FileService {
     private String generateS3Key(FileType fileType) {
         String directory = fileType.name().toLowerCase();
         return directory + "/" + UUID.randomUUID();
+    }
+
+    private boolean isImage(MultipartFile multipartFile) {
+        String contentType = multipartFile.getContentType();
+        return contentType != null && contentType.startsWith("image/");
+    }
+
+    private Users getUserInfo() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+        return usersRepository.findByUsername(auth.getName())
+                .orElseThrow(() -> new ApplicationException(UsersStatusCode.USER_NOT_FOUND));
     }
 }
