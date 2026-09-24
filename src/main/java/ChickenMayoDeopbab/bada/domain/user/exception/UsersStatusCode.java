@@ -16,6 +16,8 @@ public enum UsersStatusCode implements StatusCode {
     INVALID_MODERATION_STATUS(HttpStatus.BAD_REQUEST, "USER_006", "사용자 제재 요청이 유효하지 않습니다."),
     MODERATOR_NOT_ALLOWED(HttpStatus.FORBIDDEN, "USER_007", "사용자 제재 권한이 없습니다."),
     CANNOT_SANCTION_ADMIN(HttpStatus.FORBIDDEN, "USER_008", "관리자 계정은 제재할 수 없습니다."),
+    USER_SUSPENDED(HttpStatus.FORBIDDEN, "USER_009", "일시 정지된 계정입니다."),
+    USER_BANNED(HttpStatus.FORBIDDEN, "USER_010", "영구 정지된 계정입니다."),
 
     ;
 

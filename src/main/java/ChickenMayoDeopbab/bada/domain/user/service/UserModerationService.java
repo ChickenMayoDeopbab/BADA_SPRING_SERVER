@@ -21,10 +21,12 @@ public class UserModerationService {
 
     private final UsersRepository usersRepository;
     private final RedisTemplate<String, String> redisTemplate;
+    private final UserAccessPolicy userAccessPolicy;
 
     public void updateStatus(Long userId, UserModerationStatusRequest request) {
         Users actor = getUser(request.actorUserId());
-        if (actor.getRole() != Role.ADMIN || actor.getStatus() != UserStatus.ACTIVE) {
+        userAccessPolicy.ensureCanAccess(actor);
+        if (actor.getRole() != Role.ADMIN) {
             throw ApplicationException.of(UsersStatusCode.MODERATOR_NOT_ALLOWED);
         }
 

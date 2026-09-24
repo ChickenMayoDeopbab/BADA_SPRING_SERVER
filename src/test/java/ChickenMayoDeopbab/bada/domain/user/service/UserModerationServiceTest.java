@@ -26,7 +26,9 @@ class UserModerationServiceTest {
     private final UsersRepository usersRepository = mock(UsersRepository.class);
     @SuppressWarnings("unchecked")
     private final RedisTemplate<String, String> redisTemplate = mock(RedisTemplate.class);
-    private final UserModerationService service = new UserModerationService(usersRepository, redisTemplate);
+    private final UserAccessPolicy userAccessPolicy = new UserAccessPolicy();
+    private final UserModerationService service = new UserModerationService(
+            usersRepository, redisTemplate, userAccessPolicy);
 
     @Test
     void suspendsUserAndRevokesRefreshToken() {
