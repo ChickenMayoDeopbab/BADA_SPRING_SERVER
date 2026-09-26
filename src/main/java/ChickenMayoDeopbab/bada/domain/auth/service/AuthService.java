@@ -12,6 +12,7 @@ import ChickenMayoDeopbab.bada.domain.user.entity.Role;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
 import ChickenMayoDeopbab.bada.domain.user.exception.UsersStatusCode;
 import ChickenMayoDeopbab.bada.domain.user.repository.UsersRepository;
+import ChickenMayoDeopbab.bada.domain.user.service.UserAccessPolicy;
 import ChickenMayoDeopbab.bada.global.common.ApiResponse;
 import ChickenMayoDeopbab.bada.global.exception.ApplicationException;
 import ChickenMayoDeopbab.bada.global.jwt.JwtProvider;
@@ -39,6 +40,7 @@ public class AuthService {
     private final RedisTemplate<String, String> redisTemplate;
     private final JwtProvider jwtProvider;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final UserAccessPolicy userAccessPolicy;
 
     // access는 cookie로만 반환, refresh는 redis저장 후 cookie로 반환
     public TokenResponse login(
@@ -48,6 +50,7 @@ public class AuthService {
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new ApplicationException(AuthStatusCode.INVALID_PASSWORD);
         }
+        userAccessPolicy.ensureCanAccess(user);
 
         String accessToken = generateAccessToken(user.getUserId(), user.getRole(), response);
         String refreshToken = generateRefreshToken(user.getUserId(), response);
@@ -73,6 +76,7 @@ public class AuthService {
             throw new ApplicationException(AuthStatusCode.INVALID_REFRESH_TOKEN);
         }
         Users user = getUser(request.userId());
+        userAccessPolicy.ensureCanAccess(user);
 
         String accessToken = generateAccessToken(user.getUserId(), user.getRole(), response);
         String newRefreshToken = generateRefreshToken(user.getUserId(), response);
@@ -86,6 +90,7 @@ public class AuthService {
      * - Redis에 짧은 TTL로 저장하며, 교환 시 즉시 삭제되어 재사용할 수 없다.
      */
     public String issueOAuthCode(Long userId) {
+        userAccessPolicy.ensureCanAccess(getUser(userId));
         String code = UUID.randomUUID().toString();
 
         redisTemplate.opsForValue()
@@ -108,6 +113,7 @@ public class AuthService {
         }
 
         Users user = getUser(Long.valueOf(userId));
+        userAccessPolicy.ensureCanAccess(user);
 
         String accessToken = generateAccessToken(user.getUserId(), user.getRole(), response);
         String refreshToken = generateRefreshToken(user.getUserId(), response);
