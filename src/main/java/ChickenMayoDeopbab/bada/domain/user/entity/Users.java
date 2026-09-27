@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -43,6 +44,20 @@ public class Users {
     @Enumerated(EnumType.STRING)
     private Role role;
 
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, columnDefinition = "varchar(255) default 'ACTIVE'")
+    private UserStatus status = UserStatus.ACTIVE;
+
+    private Instant suspendedUntil;
+
+    private Instant sanctionedAt;
+
+    private Long sanctionedByUserId;
+
+    @Column(length = 500)
+    private String sanctionReason;
+
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
@@ -68,6 +83,9 @@ public class Users {
         if (provider == null) {
             this.provider = Provider.LOCAL;
             this.providerId = UUID.randomUUID().toString();
+        }
+        if (status == null) {
+            this.status = UserStatus.ACTIVE;
         }
     }
 
@@ -95,5 +113,26 @@ public class Users {
 
     public void intendPayment() {
         this.paymentIntended = true;
+    }
+
+    public void updateModerationStatus(
+            UserStatus status,
+            Instant suspendedUntil,
+            Instant sanctionedAt,
+            Long sanctionedByUserId,
+            String sanctionReason) {
+        this.status = status;
+        this.suspendedUntil = status == UserStatus.SUSPENDED ? suspendedUntil : null;
+        this.sanctionedAt = status == UserStatus.ACTIVE ? null : sanctionedAt;
+        this.sanctionedByUserId = status == UserStatus.ACTIVE ? null : sanctionedByUserId;
+        this.sanctionReason = status == UserStatus.ACTIVE ? null : sanctionReason;
+    }
+
+    public boolean activateIfSuspensionExpired(Instant now) {
+        if (status != UserStatus.SUSPENDED || suspendedUntil == null || suspendedUntil.isAfter(now)) {
+            return false;
+        }
+        updateModerationStatus(UserStatus.ACTIVE, null, null, null, null);
+        return true;
     }
 }

@@ -2,6 +2,7 @@ package ChickenMayoDeopbab.bada.domain.auth.service;
 
 import ChickenMayoDeopbab.bada.domain.auth.dto.request.RefreshRequest;
 import ChickenMayoDeopbab.bada.domain.user.repository.UsersRepository;
+import ChickenMayoDeopbab.bada.domain.user.service.UserAccessPolicy;
 import ChickenMayoDeopbab.bada.global.exception.ApplicationException;
 import ChickenMayoDeopbab.bada.global.jwt.JwtProvider;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,9 +33,10 @@ class AuthServiceRefreshTest {
     private final UsersRepository usersRepository = mock(UsersRepository.class);
     private final JwtProvider jwtProvider = mock(JwtProvider.class);
     private final BCryptPasswordEncoder passwordEncoder = mock(BCryptPasswordEncoder.class);
+    private final UserAccessPolicy userAccessPolicy = mock(UserAccessPolicy.class);
 
     private final AuthService authService =
-            new AuthService(usersRepository, redisTemplate, jwtProvider, passwordEncoder);
+            new AuthService(usersRepository, redisTemplate, jwtProvider, passwordEncoder, userAccessPolicy);
 
     @BeforeEach
     void setUp() {
