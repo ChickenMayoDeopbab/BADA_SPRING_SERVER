@@ -15,7 +15,7 @@ import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.*;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingAnalysisMetrics;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingRecord;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.exception.TrainingRecordStatusCode;
-import ChickenMayoDeopbab.bada.domain.trainingrecord.port.FeedbackCleanupPort;
+import ChickenMayoDeopbab.bada.domain.trainingrecord.port.TrainingDataCleanupPort;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.repository.TrainingRecordRepository;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.repository.projection.ScenarioCategoryProjection;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
@@ -52,7 +52,7 @@ public class TrainingRecordService {
     private final UsersRepository usersRepository;
     private final ObjectMapper objectMapper;
     private final FileService fileService;
-    private final FeedbackCleanupPort feedbackCleanupPort;
+    private final TrainingDataCleanupPort trainingDataCleanupPort;
     private final CallAnxietyStateRepository callAnxietyStateRepository;
     private final CallAnxietyScoreCalculator callAnxietyScoreCalculator;
     private final SensitiveInformationConsentPolicy sensitiveInformationConsentPolicy;
@@ -208,15 +208,7 @@ public class TrainingRecordService {
         TrainingRecord record = trainingRecordRepository.findByRecordIdAndUser(recordId, user)
                 .orElseThrow(() -> new ApplicationException(TrainingRecordStatusCode.RECORD_NOT_FOUND));
 
-        if (record.isScoreApplied()) {
-            throw new ApplicationException(
-                    TrainingRecordStatusCode
-                            .SCORE_APPLIED_RECORD_CANNOT_BE_DELETED
-            );
-        }
-
-        deleteRecordingQuietly(record.getRecordingKey());
-        deleteFeedbackQuietly(record.getSessionId());
+        deleteExternalTrainingData(record);
 
         trainingRecordRepository.delete(record);
     }
@@ -230,8 +222,7 @@ public class TrainingRecordService {
         }
 
         for (TrainingRecord record : records) {
-            deleteRecordingQuietly(record.getRecordingKey());
-            deleteFeedbackQuietly(record.getSessionId());
+            deleteExternalTrainingData(record);
         }
 
         trainingRecordRepository.deleteAll(records);
@@ -389,22 +380,12 @@ public class TrainingRecordService {
         return AnxietyScoreResponse.from(record);
     }
 
-    private void deleteRecordingQuietly(String recordingKey) {
-        if (recordingKey == null || recordingKey.isBlank()) {
-            return;
-        }
-        try {
-            fileService.deleteByKey(recordingKey);
-        } catch (Exception e) {
-            log.warn("녹음 파일 삭제 실패, 기록 삭제는 계속 진행 recordingKey={}", recordingKey, e);
-        }
-    }
+    private void deleteExternalTrainingData(TrainingRecord record) {
+        trainingDataCleanupPort.deleteBySessionId(record.getSessionId());
 
-    private void deleteFeedbackQuietly(String sessionId) {
-        try {
-            feedbackCleanupPort.deleteBySessionId(sessionId);
-        } catch (Exception e) {
-            log.warn("AI 피드백 정리 실패, 기록 삭제는 계속 진행 sessionId={}", sessionId, e);
+        String recordingKey = record.getRecordingKey();
+        if (recordingKey != null && !recordingKey.isBlank()) {
+            fileService.deleteByKey(recordingKey);
         }
     }
 
