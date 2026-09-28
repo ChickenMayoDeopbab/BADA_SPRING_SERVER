@@ -40,8 +40,10 @@ class OAuthUserRegistrarTest {
                 .thenReturn(Optional.empty());
         when(usersRepository.save(any(Users.class))).thenAnswer(i -> i.getArgument(0));
 
-        Users saved = registrar.register(googleAttributes("https://img/1.png"));
+        OAuthUserRegistrar.Registration registration = registrar.register(googleAttributes("https://img/1.png"));
+        Users saved = registration.user();
 
+        assertThat(registration.newUser()).isTrue();
         assertThat(saved.getProvider()).isEqualTo(Provider.GOOGLE);
         assertThat(saved.getProviderId()).isEqualTo("google-123");
         assertThat(saved.getEmail()).isEqualTo("a@b.com");
@@ -58,8 +60,10 @@ class OAuthUserRegistrarTest {
         when(usersRepository.findByProviderAndProviderId(Provider.GOOGLE, "google-123"))
                 .thenReturn(Optional.of(existing));
 
-        Users result = registrar.register(googleAttributes("https://img/새것.png"));
+        OAuthUserRegistrar.Registration registration = registrar.register(googleAttributes("https://img/새것.png"));
+        Users result = registration.user();
 
+        assertThat(registration.newUser()).isFalse();
         assertThat(result).isSameAs(existing);
         // 앱에서 바꾼 프로필 이미지를 매 로그인마다 되돌리면 안 된다.
         assertThat(result.getProfileImage()).isEqualTo("https://img/기존.png");
@@ -77,8 +81,11 @@ class OAuthUserRegistrarTest {
                 .thenReturn(Optional.of(existing));
         when(usersRepository.save(any(Users.class))).thenAnswer(i -> i.getArgument(0));
 
-        Users result = registrar.register(googleAttributes("https://img/새것.png"));
+        OAuthUserRegistrar.Registration registration = registrar.register(googleAttributes("https://img/새것.png"));
+        Users result = registration.user();
 
+        // 이미지를 채우느라 save를 다시 불러도 신규 가입은 아니다.
+        assertThat(registration.newUser()).isFalse();
         assertThat(result.getProfileImage()).isEqualTo("https://img/새것.png");
         verify(usersRepository).save(existing);
     }
@@ -92,7 +99,7 @@ class OAuthUserRegistrarTest {
         when(usersRepository.findByProviderAndProviderId(Provider.GOOGLE, "google-123"))
                 .thenReturn(Optional.of(existing));
 
-        Users result = registrar.register(googleAttributes("https://img/새것.png"));
+        Users result = registrar.register(googleAttributes("https://img/새것.png")).user();
 
         assertThat(result.getProfileImage()).isNull();
         verify(usersRepository, never()).save(any(Users.class));
@@ -108,7 +115,7 @@ class OAuthUserRegistrarTest {
         OAuthAttributes attributes = OAuthAttributes.ofApple(
                 "sub", Map.of("sub", "apple-sub-1", "email", "hidden@privaterelay.appleid.com"), "홍길동");
 
-        Users saved = registrar.register(attributes);
+        Users saved = registrar.register(attributes).user();
 
         assertThat(saved.getProvider()).isEqualTo(Provider.APPLE);
         assertThat(saved.getProviderId()).isEqualTo("apple-sub-1");
@@ -124,7 +131,7 @@ class OAuthUserRegistrarTest {
         when(usersRepository.save(any(Users.class))).thenAnswer(i -> i.getArgument(0));
 
         Users saved = registrar.register(
-                OAuthAttributes.ofApple("sub", Map.of("sub", "apple-sub-2"), null));
+                OAuthAttributes.ofApple("sub", Map.of("sub", "apple-sub-2"), null)).user();
 
         assertThat(saved.getEmail()).isNull();
         assertThat(saved.getProviderId()).isEqualTo("apple-sub-2");

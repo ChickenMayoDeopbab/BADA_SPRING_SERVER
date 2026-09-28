@@ -12,10 +12,10 @@ public class OAuthUserRegistrar {
 
     private final UsersRepository usersRepository;
 
-    public Users register(OAuthAttributes attributes) {
+    public Registration register(OAuthAttributes attributes) {
         return usersRepository.findByProviderAndProviderId(attributes.getProvider(), attributes.getProviderId())
-                .map(user -> syncProfileImage(user, attributes.getPicture()))
-                .orElseGet(() -> usersRepository.save(attributes.toEntity()));
+                .map(user -> new Registration(syncProfileImage(user, attributes.getPicture()), false))
+                .orElseGet(() -> new Registration(usersRepository.save(attributes.toEntity()), true));
     }
 
     // 기존 회원의 프로필 이미지는 비어 있을 때만 채운다. 앱에서 직접 바꾼 이미지를 매 로그인마다 되돌리지 않기 위함이다.
@@ -24,5 +24,9 @@ public class OAuthUserRegistrar {
             return user;
         }
         return user.applyProfileImageIfAbsent(picture) ? usersRepository.save(user) : user;
+    }
+
+    // newUser: 이번 로그인에서 계정이 새로 만들어졌는지. 앱이 첫 가입 화면을 띄울지 판단하는 데 쓴다.
+    public record Registration(Users user, boolean newUser) {
     }
 }
