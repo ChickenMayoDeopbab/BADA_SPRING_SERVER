@@ -3,6 +3,7 @@ package ChickenMayoDeopbab.bada.domain.trainingrecord.service;
 import ChickenMayoDeopbab.bada.domain.callanxiety.repository.CallAnxietyStateRepository;
 import ChickenMayoDeopbab.bada.domain.callanxiety.service.CallAnxietyScoreCalculator;
 import ChickenMayoDeopbab.bada.domain.file.service.FileService;
+import ChickenMayoDeopbab.bada.domain.legalconsent.service.SensitiveInformationConsentPolicy;
 import ChickenMayoDeopbab.bada.domain.session.enums.EndReason;
 import ChickenMayoDeopbab.bada.domain.session.enums.SessionType;
 import ChickenMayoDeopbab.bada.domain.session.model.GoodSegment;
@@ -54,6 +55,8 @@ class TrainingRecordServiceTest {
     private final FeedbackCleanupPort feedbackCleanupPort = mock(FeedbackCleanupPort.class);
     private final CallAnxietyStateRepository callAnxietyStateRepository =
             mock(CallAnxietyStateRepository.class);
+    private final SensitiveInformationConsentPolicy sensitiveInformationConsentPolicy =
+            mock(SensitiveInformationConsentPolicy.class);
     private final TrainingRecordService service = new TrainingRecordService(
             trainingRecordRepository,
             usersRepository,
@@ -61,7 +64,8 @@ class TrainingRecordServiceTest {
             fileService,
             feedbackCleanupPort,
             callAnxietyStateRepository,
-            new CallAnxietyScoreCalculator()
+            new CallAnxietyScoreCalculator(),
+            sensitiveInformationConsentPolicy
     );
 
     private final Users user = mock(Users.class);

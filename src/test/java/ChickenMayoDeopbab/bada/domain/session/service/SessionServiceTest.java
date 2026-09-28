@@ -1,6 +1,7 @@
 package ChickenMayoDeopbab.bada.domain.session.service;
 
 import ChickenMayoDeopbab.bada.domain.session.dto.request.CreateSessionRequest;
+import ChickenMayoDeopbab.bada.domain.legalconsent.service.SensitiveInformationConsentPolicy;
 import ChickenMayoDeopbab.bada.domain.session.enums.AiPersonality;
 import ChickenMayoDeopbab.bada.domain.session.enums.SessionType;
 import ChickenMayoDeopbab.bada.domain.session.model.SessionContext;
@@ -50,6 +51,8 @@ class SessionServiceTest {
         SessionRedisRepository sessionRedisRepository = mock(SessionRedisRepository.class);
         SessionRecordPort sessionRecordPort = mock(SessionRecordPort.class);
         TrainingRecordRepository trainingRecordRepository = mock(TrainingRecordRepository.class);
+        SensitiveInformationConsentPolicy sensitiveInformationConsentPolicy =
+                mock(SensitiveInformationConsentPolicy.class);
 
         Users user = mock(Users.class);
         when(user.getUserId()).thenReturn(7L);
@@ -65,7 +68,8 @@ class SessionServiceTest {
                 scenarioPort,
                 sessionRedisRepository,
                 sessionRecordPort,
-                trainingRecordRepository
+                trainingRecordRepository,
+                sensitiveInformationConsentPolicy
         );
 
         service.create(
@@ -75,6 +79,7 @@ class SessionServiceTest {
 
         ArgumentCaptor<SessionContext> captor = ArgumentCaptor.forClass(SessionContext.class);
         verify(sessionRedisRepository).save(anyString(), captor.capture());
+        verify(sensitiveInformationConsentPolicy).ensureAgreed(user);
         assertThat(captor.getValue().scriptLevel()).isEqualTo(2);
         assertThat(captor.getValue().userId()).isEqualTo(7L);
     }

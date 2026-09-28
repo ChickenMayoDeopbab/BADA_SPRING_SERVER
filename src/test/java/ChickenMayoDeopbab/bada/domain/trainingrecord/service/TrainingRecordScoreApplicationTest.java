@@ -5,6 +5,7 @@ import ChickenMayoDeopbab.bada.domain.callanxiety.repository.CallAnxietyStateRep
 import ChickenMayoDeopbab.bada.domain.callanxiety.service.CallAnxietyScoreCalculator;
 import ChickenMayoDeopbab.bada.domain.diagnosis.entity.CallPhobiaLevel;
 import ChickenMayoDeopbab.bada.domain.file.service.FileService;
+import ChickenMayoDeopbab.bada.domain.legalconsent.service.SensitiveInformationConsentPolicy;
 import ChickenMayoDeopbab.bada.domain.session.enums.EndReason;
 import ChickenMayoDeopbab.bada.domain.session.enums.SessionType;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.request.TrainingAnalysisRequest;
@@ -56,6 +57,9 @@ class TrainingRecordScoreApplicationTest {
     private final CallAnxietyStateRepository callAnxietyStateRepository =
             mock(CallAnxietyStateRepository.class);
 
+    private final SensitiveInformationConsentPolicy sensitiveInformationConsentPolicy =
+            mock(SensitiveInformationConsentPolicy.class);
+
     private final TrainingRecordService service =
             new TrainingRecordService(
                     trainingRecordRepository,
@@ -64,7 +68,8 @@ class TrainingRecordScoreApplicationTest {
                     fileService,
                     feedbackCleanupPort,
                     callAnxietyStateRepository,
-                    new CallAnxietyScoreCalculator()
+                    new CallAnxietyScoreCalculator(),
+                    sensitiveInformationConsentPolicy
             );
 
     private final Users user = mock(Users.class);
