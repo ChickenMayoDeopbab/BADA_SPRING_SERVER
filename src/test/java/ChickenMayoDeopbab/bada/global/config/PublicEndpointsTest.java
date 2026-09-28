@@ -70,6 +70,15 @@ class PublicEndpointsTest {
     }
 
     @Test
+    void 녹음_재생만_토큰_링크로_열려_있다() {
+        assertThat(isPublic("GET", "/api/v1/training-records/1/recording")).isTrue();
+        assertThat(isPublic("DELETE", "/api/v1/training-records/1/recording")).isFalse();
+        assertThat(isPublic("GET", "/api/v1/training-records/1")).isFalse();
+        assertThat(isPublic("GET", "/api/v1/training-records/feedback")).isFalse();
+        assertThat(isPublic("GET", "/api/v1/training-records/1/recording/extra")).isFalse();
+    }
+
+    @Test
     void 메서드가_다르면_열리지_않는다() {
         assertThat(isPublic("GET", "/api/v1/auth/login")).isFalse();
         assertThat(isPublic("POST", "/api/diagnosis/questions")).isFalse();
