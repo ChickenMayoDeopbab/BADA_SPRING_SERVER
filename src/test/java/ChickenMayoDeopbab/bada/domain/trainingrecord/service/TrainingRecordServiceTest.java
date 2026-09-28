@@ -12,7 +12,7 @@ import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.FeedbackRespon
 import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.TrainingRecordResponse;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingRecord;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.exception.TrainingRecordStatusCode;
-import ChickenMayoDeopbab.bada.domain.trainingrecord.port.FeedbackCleanupPort;
+import ChickenMayoDeopbab.bada.domain.trainingrecord.port.TrainingDataCleanupPort;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.repository.TrainingRecordRepository;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.repository.projection.ScenarioCategoryProjection;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
@@ -52,7 +52,8 @@ class TrainingRecordServiceTest {
     private final TrainingRecordRepository trainingRecordRepository = mock(TrainingRecordRepository.class);
     private final UsersRepository usersRepository = mock(UsersRepository.class);
     private final FileService fileService = mock(FileService.class);
-    private final FeedbackCleanupPort feedbackCleanupPort = mock(FeedbackCleanupPort.class);
+    private final TrainingDataCleanupPort trainingDataCleanupPort =
+            mock(TrainingDataCleanupPort.class);
     private final CallAnxietyStateRepository callAnxietyStateRepository =
             mock(CallAnxietyStateRepository.class);
     private final SensitiveInformationConsentPolicy sensitiveInformationConsentPolicy =
@@ -62,7 +63,7 @@ class TrainingRecordServiceTest {
             usersRepository,
             new ObjectMapper(),
             fileService,
-            feedbackCleanupPort,
+            trainingDataCleanupPort,
             callAnxietyStateRepository,
             new CallAnxietyScoreCalculator(),
             sensitiveInformationConsentPolicy
@@ -266,14 +267,29 @@ class TrainingRecordServiceTest {
     }
 
     @Test
-    void deleteRemovesRowRecordingAndFeedback() {
+    void deleteRemovesRowRecordingAndRelatedTrainingData() {
         TrainingRecord record = record("recordings/sess-1.wav");
         login(record);
 
         service.deleteTrainingRecord(1L);
 
         verify(fileService).deleteByKey("recordings/sess-1.wav");
-        verify(feedbackCleanupPort).deleteBySessionId("sess-1");
+        verify(trainingDataCleanupPort).deleteBySessionId("sess-1");
+        verify(trainingRecordRepository).delete(record);
+    }
+
+    @Test
+    void deleteAllowsRecordAlreadyAppliedToAggregateScore() {
+        TrainingRecord record = mock(TrainingRecord.class);
+        when(record.getSessionId()).thenReturn("sess-applied");
+        when(record.getRecordingKey()).thenReturn("recordings/sess-applied.wav");
+        when(record.isScoreApplied()).thenReturn(true);
+        login(record);
+
+        service.deleteTrainingRecord(1L);
+
+        verify(trainingDataCleanupPort).deleteBySessionId("sess-applied");
+        verify(fileService).deleteByKey("recordings/sess-applied.wav");
         verify(trainingRecordRepository).delete(record);
     }
 
@@ -287,32 +303,37 @@ class TrainingRecordServiceTest {
                 .isEqualTo(TrainingRecordStatusCode.RECORD_NOT_FOUND);
 
         verify(fileService, never()).deleteByKey(anyString());
-        verify(feedbackCleanupPort, never()).deleteBySessionId(anyString());
+        verify(trainingDataCleanupPort, never()).deleteBySessionId(anyString());
         verify(trainingRecordRepository, never()).delete(any());
     }
 
     @Test
-    void recordingDeleteFailureStillDeletesRow() {
+    void recordingDeleteFailureKeepsRowForRetry() {
         TrainingRecord record = record("recordings/sess-1.wav");
         login(record);
         doThrow(new RuntimeException("s3 down")).when(fileService).deleteByKey(anyString());
 
-        service.deleteTrainingRecord(1L);
+        assertThatThrownBy(() -> service.deleteTrainingRecord(1L))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("s3 down");
 
-        verify(feedbackCleanupPort).deleteBySessionId("sess-1");
-        verify(trainingRecordRepository).delete(record);
+        verify(trainingDataCleanupPort).deleteBySessionId("sess-1");
+        verify(trainingRecordRepository, never()).delete(record);
     }
 
     @Test
-    void feedbackCleanupFailureStillDeletesRow() {
+    void trainingDataCleanupFailureKeepsRowAndRecordingForRetry() {
         TrainingRecord record = record("recordings/sess-1.wav");
         login(record);
-        doThrow(new RuntimeException("ai down")).when(feedbackCleanupPort).deleteBySessionId(anyString());
+        doThrow(new RuntimeException("ai down"))
+                .when(trainingDataCleanupPort).deleteBySessionId(anyString());
 
-        service.deleteTrainingRecord(1L);
+        assertThatThrownBy(() -> service.deleteTrainingRecord(1L))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("ai down");
 
-        verify(fileService).deleteByKey("recordings/sess-1.wav");
-        verify(trainingRecordRepository).delete(record);
+        verify(fileService, never()).deleteByKey(anyString());
+        verify(trainingRecordRepository, never()).delete(record);
     }
 
     @Test
@@ -323,7 +344,7 @@ class TrainingRecordServiceTest {
         service.deleteTrainingRecord(1L);
 
         verify(fileService, never()).deleteByKey(anyString());
-        verify(feedbackCleanupPort).deleteBySessionId("sess-1");
+        verify(trainingDataCleanupPort).deleteBySessionId("sess-1");
         verify(trainingRecordRepository).delete(record);
     }
 
@@ -336,11 +357,11 @@ class TrainingRecordServiceTest {
 
         service.deleteAllByUser(user);
 
-        InOrder order = inOrder(fileService, feedbackCleanupPort, trainingRecordRepository);
+        InOrder order = inOrder(fileService, trainingDataCleanupPort, trainingRecordRepository);
+        order.verify(trainingDataCleanupPort).deleteBySessionId("sess-1");
         order.verify(fileService).deleteByKey("recordings/sess-1.wav");
-        order.verify(feedbackCleanupPort).deleteBySessionId("sess-1");
+        order.verify(trainingDataCleanupPort).deleteBySessionId("sess-2");
         order.verify(fileService).deleteByKey("recordings/sess-2.wav");
-        order.verify(feedbackCleanupPort).deleteBySessionId("sess-2");
         order.verify(trainingRecordRepository).deleteAll(records);
     }
 
@@ -351,19 +372,22 @@ class TrainingRecordServiceTest {
         service.deleteAllByUser(user);
 
         verify(trainingRecordRepository, never()).deleteAll(any());
-        verifyNoInteractions(fileService, feedbackCleanupPort);
+        verifyNoInteractions(fileService, trainingDataCleanupPort);
     }
 
     @Test
-    void deleteAllByUserContinuesWhenExternalCleanupFails() {
+    void deleteAllByUserKeepsRowsWhenExternalCleanupFails() {
         List<TrainingRecord> records = List.of(record("sess-1", "recordings/sess-1.wav"));
         when(trainingRecordRepository.findAllByUser(user)).thenReturn(records);
-        doThrow(new RuntimeException("s3 down")).when(fileService).deleteByKey(anyString());
-        doThrow(new RuntimeException("ai down")).when(feedbackCleanupPort).deleteBySessionId(anyString());
+        doThrow(new RuntimeException("ai down"))
+                .when(trainingDataCleanupPort).deleteBySessionId(anyString());
 
-        service.deleteAllByUser(user);
+        assertThatThrownBy(() -> service.deleteAllByUser(user))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("ai down");
 
-        verify(trainingRecordRepository).deleteAll(records);
+        verify(fileService, never()).deleteByKey(anyString());
+        verify(trainingRecordRepository, never()).deleteAll(records);
     }
 
     private static final String TRANSCRIPT_JSON = """

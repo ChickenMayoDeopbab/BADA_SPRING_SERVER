@@ -14,7 +14,7 @@ import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.AnalysisQualityStatu
 import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingAnalysisMetrics;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingRecord;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.exception.TrainingRecordStatusCode;
-import ChickenMayoDeopbab.bada.domain.trainingrecord.port.FeedbackCleanupPort;
+import ChickenMayoDeopbab.bada.domain.trainingrecord.port.TrainingDataCleanupPort;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.repository.TrainingRecordRepository;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
 import ChickenMayoDeopbab.bada.domain.user.repository.UsersRepository;
@@ -51,8 +51,8 @@ class TrainingRecordScoreApplicationTest {
     private final FileService fileService =
             mock(FileService.class);
 
-    private final FeedbackCleanupPort feedbackCleanupPort =
-            mock(FeedbackCleanupPort.class);
+    private final TrainingDataCleanupPort trainingDataCleanupPort =
+            mock(TrainingDataCleanupPort.class);
 
     private final CallAnxietyStateRepository callAnxietyStateRepository =
             mock(CallAnxietyStateRepository.class);
@@ -66,7 +66,7 @@ class TrainingRecordScoreApplicationTest {
                     usersRepository,
                     new ObjectMapper(),
                     fileService,
-                    feedbackCleanupPort,
+                    trainingDataCleanupPort,
                     callAnxietyStateRepository,
                     new CallAnxietyScoreCalculator(),
                     sensitiveInformationConsentPolicy
