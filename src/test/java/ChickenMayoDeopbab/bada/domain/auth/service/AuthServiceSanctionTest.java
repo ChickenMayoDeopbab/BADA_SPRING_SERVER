@@ -74,7 +74,7 @@ class AuthServiceSanctionTest {
     void rejectsBannedUserBeforeIssuingOAuthCode() {
         when(usersRepository.findById(7L)).thenReturn(Optional.of(restrictedUser(UserStatus.BANNED, null)));
 
-        assertStatus(() -> service.issueOAuthCode(7L), UsersStatusCode.USER_BANNED);
+        assertStatus(() -> service.issueOAuthCode(7L, false), UsersStatusCode.USER_BANNED);
 
         verify(valueOperations, never()).set(any(), any(), any());
     }

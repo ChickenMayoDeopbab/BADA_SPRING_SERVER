@@ -8,6 +8,7 @@ import ChickenMayoDeopbab.bada.domain.auth.dto.request.EmailVerificationRequest;
 import  ChickenMayoDeopbab.bada.domain.auth.dto.request.LoginRequest;
 import ChickenMayoDeopbab.bada.domain.auth.dto.request.OAuthCodeRequest;
 import ChickenMayoDeopbab.bada.domain.auth.dto.request.RefreshRequest;
+import ChickenMayoDeopbab.bada.domain.auth.dto.response.OAuthTokenResponse;
 import ChickenMayoDeopbab.bada.domain.auth.dto.response.TokenResponse;
 import ChickenMayoDeopbab.bada.domain.auth.service.AuthService;
 import ChickenMayoDeopbab.bada.domain.auth.service.EmailService;
@@ -117,10 +118,10 @@ public class AuthController {
 
     // 소셜 로그인 1회용 코드 → 토큰 교환
     @PostMapping("/oauth/token")
-    public ApiResponse<TokenResponse> exchangeOAuthCode(
+    public ApiResponse<OAuthTokenResponse> exchangeOAuthCode(
             @Valid @RequestBody OAuthCodeRequest request,
             HttpServletResponse response) {
-        TokenResponse res = authService.exchangeOAuthCode(request.code(), response);
+        OAuthTokenResponse res = authService.exchangeOAuthCode(request.code(), response);
 
         return ApiResponse.ok(res, "로그인에 성공했습니다.");
     }

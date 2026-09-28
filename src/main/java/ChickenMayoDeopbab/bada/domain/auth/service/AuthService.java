@@ -4,6 +4,7 @@ import ChickenMayoDeopbab.bada.domain.auth.dto.request.ChangePasswordRequest;
 import ChickenMayoDeopbab.bada.domain.auth.dto.request.CheckUsernameRequest;
 import ChickenMayoDeopbab.bada.domain.auth.dto.request.LoginRequest;
 import ChickenMayoDeopbab.bada.domain.auth.dto.request.RefreshRequest;
+import ChickenMayoDeopbab.bada.domain.auth.dto.response.OAuthTokenResponse;
 import ChickenMayoDeopbab.bada.domain.auth.dto.response.TokenResponse;
 import ChickenMayoDeopbab.bada.domain.auth.enums.AuthEmailType;
 import ChickenMayoDeopbab.bada.domain.auth.exception.AuthStatusCode;
@@ -35,6 +36,7 @@ public class AuthService {
 
     private static final String OAUTH_CODE_PREFIX = "oauthCode: ";
     private static final Duration OAUTH_CODE_TTL = Duration.ofSeconds(60);
+    private static final String OAUTH_CODE_VALUE_DELIMITER = ":";
 
     private final UsersRepository usersRepository;
     private final RedisTemplate<String, String> redisTemplate;
@@ -88,13 +90,14 @@ public class AuthService {
      * 소셜 로그인 성공 직후 1회용 교환 코드를 발급한다.
      * - 딥링크 URL에 토큰 대신 이 코드만 실어 앱으로 돌려보낸다.
      * - Redis에 짧은 TTL로 저장하며, 교환 시 즉시 삭제되어 재사용할 수 없다.
+     * - 신규 가입 여부도 함께 저장해 두었다가 토큰 교환 응답에 실어 준다.
      */
-    public String issueOAuthCode(Long userId) {
+    public String issueOAuthCode(Long userId, boolean isNewUser) {
         userAccessPolicy.ensureCanAccess(getUser(userId));
         String code = UUID.randomUUID().toString();
 
         redisTemplate.opsForValue()
-                .set(OAUTH_CODE_PREFIX + code, String.valueOf(userId), OAUTH_CODE_TTL);
+                .set(OAUTH_CODE_PREFIX + code, userId + OAUTH_CODE_VALUE_DELIMITER + isNewUser, OAUTH_CODE_TTL);
 
         return code;
     }
@@ -103,22 +106,26 @@ public class AuthService {
      * 1회용 교환 코드를 AccessToken/RefreshToken으로 교환한다.
      * - 코드는 조회와 동시에 삭제되므로 두 번째 요청은 실패한다.
      */
-    public TokenResponse exchangeOAuthCode(
+    public OAuthTokenResponse exchangeOAuthCode(
             String code,
             HttpServletResponse response) {
-        String userId = redisTemplate.opsForValue().getAndDelete(OAUTH_CODE_PREFIX + code);
+        String value = redisTemplate.opsForValue().getAndDelete(OAUTH_CODE_PREFIX + code);
 
-        if (userId == null) {
+        if (value == null) {
             throw new ApplicationException(AuthStatusCode.INVALID_OAUTH_CODE);
         }
 
-        Users user = getUser(Long.valueOf(userId));
+        // 배포 직전에 userId만 저장된 코드가 남아 있을 수 있으므로 플래그가 없으면 기존 회원으로 본다.
+        String[] parts = value.split(OAUTH_CODE_VALUE_DELIMITER);
+        boolean isNewUser = parts.length > 1 && Boolean.parseBoolean(parts[1]);
+
+        Users user = getUser(Long.valueOf(parts[0]));
         userAccessPolicy.ensureCanAccess(user);
 
         String accessToken = generateAccessToken(user.getUserId(), user.getRole(), response);
         String refreshToken = generateRefreshToken(user.getUserId(), response);
 
-        return new TokenResponse(accessToken, refreshToken);
+        return new OAuthTokenResponse(accessToken, refreshToken, isNewUser);
     }
 
     /**

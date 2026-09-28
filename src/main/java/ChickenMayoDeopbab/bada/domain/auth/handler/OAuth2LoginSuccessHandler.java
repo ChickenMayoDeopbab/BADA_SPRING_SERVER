@@ -1,5 +1,6 @@
 package ChickenMayoDeopbab.bada.domain.auth.handler;
 
+import ChickenMayoDeopbab.bada.domain.auth.principal.SocialLoginUser;
 import ChickenMayoDeopbab.bada.domain.auth.service.AuthService;
 import ChickenMayoDeopbab.bada.domain.auth.service.OAuthRedirectUriResolver;
 import ChickenMayoDeopbab.bada.domain.user.entity.Provider;
@@ -63,7 +64,9 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         Users user = usersRepository.findByProviderAndProviderId(provider, providerId)
                 .orElseThrow(() -> new ApplicationException(UsersStatusCode.USER_NOT_FOUND));
 
-        return authService.issueOAuthCode(user.getUserId());
+        boolean isNewUser = oAuth2User instanceof SocialLoginUser socialLoginUser && socialLoginUser.isNewUser();
+
+        return authService.issueOAuthCode(user.getUserId(), isNewUser);
     }
 
     private String buildRedirectUrl(String redirectUri, String paramName, String paramValue) {
