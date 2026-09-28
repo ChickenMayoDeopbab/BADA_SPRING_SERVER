@@ -11,6 +11,7 @@ import ChickenMayoDeopbab.bada.domain.session.model.TranscriptTurn;
 import ChickenMayoDeopbab.bada.domain.session.port.ScenarioPort;
 import ChickenMayoDeopbab.bada.domain.session.port.SessionRecordPort;
 import ChickenMayoDeopbab.bada.domain.session.repository.SessionRedisRepository;
+import ChickenMayoDeopbab.bada.domain.legalconsent.service.SensitiveInformationConsentPolicy;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.request.TrainingAnalysisRequest;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.repository.TrainingRecordRepository;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
@@ -38,6 +39,7 @@ public class SessionService {
     private final SessionRedisRepository sessionRedisRepository;
     private final SessionRecordPort sessionRecordPort;
     private final TrainingRecordRepository trainingRecordRepository;
+    private final SensitiveInformationConsentPolicy sensitiveInformationConsentPolicy;
 
     // 훈련 횟수로 안 치는 종료 사유
     private static final List<EndReason> UNTRAINED_END_REASONS =
@@ -52,6 +54,7 @@ public class SessionService {
     }
 
     public CreateSessionResponse createForUser(Users user, CreateSessionRequest request, String accessToken) {
+        sensitiveInformationConsentPolicy.ensureAgreed(user);
         ScenarioContext scenario = scenarioPort.fetch(request.scenarioId(), request.type());
 
         long trainedCount = trainingRecordRepository.countByUserAndScenarioIdAndEndReasonNotIn(

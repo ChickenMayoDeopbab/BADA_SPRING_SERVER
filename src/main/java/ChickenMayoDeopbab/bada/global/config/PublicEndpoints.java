@@ -18,8 +18,7 @@ public final class PublicEndpoints {
             "/api/v1/auth/email/send",
             "/api/v1/auth/email/check",
             "/api/v1/auth/check/username",
-            "/api/v1/auth/oauth/token",
-            "/api/diagnosis/submit"
+            "/api/v1/auth/oauth/token"
     };
 
     public static final String[] GET = {

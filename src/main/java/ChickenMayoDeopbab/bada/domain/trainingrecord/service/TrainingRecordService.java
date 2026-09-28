@@ -6,6 +6,7 @@ import ChickenMayoDeopbab.bada.domain.callanxiety.repository.CallAnxietyStateRep
 import ChickenMayoDeopbab.bada.domain.callanxiety.service.CallAnxietyScoreCalculator;
 import ChickenMayoDeopbab.bada.domain.diagnosis.entity.CallPhobiaLevel;
 import ChickenMayoDeopbab.bada.domain.file.service.FileService;
+import ChickenMayoDeopbab.bada.domain.legalconsent.service.SensitiveInformationConsentPolicy;
 import ChickenMayoDeopbab.bada.domain.session.enums.EndReason;
 import ChickenMayoDeopbab.bada.domain.session.enums.SessionType;
 import ChickenMayoDeopbab.bada.domain.session.model.GoodSegment;
@@ -54,6 +55,7 @@ public class TrainingRecordService {
     private final FeedbackCleanupPort feedbackCleanupPort;
     private final CallAnxietyStateRepository callAnxietyStateRepository;
     private final CallAnxietyScoreCalculator callAnxietyScoreCalculator;
+    private final SensitiveInformationConsentPolicy sensitiveInformationConsentPolicy;
     private static final String OTHER_CATEGORY = "other";
     private static final Map<String, String> CATEGORY_ICON_KEYS = Map.of(
             "work", "scenario_profile/9c59b8ee-46d0-4207-bed0-ab7136104fef",
@@ -243,6 +245,7 @@ public class TrainingRecordService {
         validateSubjectiveAnxiety(anxietyScore);
 
         Users user = getUserInfo();
+        sensitiveInformationConsentPolicy.ensureAgreed(user);
 
         TrainingRecord record = trainingRecordRepository
                 .findBySessionIdAndUser(sessionId, user)

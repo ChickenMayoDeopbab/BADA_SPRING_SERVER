@@ -11,9 +11,14 @@ import ChickenMayoDeopbab.bada.domain.diagnosis.entity.DiagnosisResult;
 import ChickenMayoDeopbab.bada.domain.diagnosis.entity.DiagnosisType;
 import ChickenMayoDeopbab.bada.domain.diagnosis.repository.DiagnosisRepository;
 import ChickenMayoDeopbab.bada.domain.diagnosis.repository.DiagnosisResultRepository;
+import ChickenMayoDeopbab.bada.domain.legalconsent.service.SensitiveInformationConsentPolicy;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
+import ChickenMayoDeopbab.bada.domain.user.exception.UsersStatusCode;
 import ChickenMayoDeopbab.bada.domain.user.repository.UsersRepository;
+import ChickenMayoDeopbab.bada.global.exception.ApplicationException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +34,7 @@ public class DiagnosisService {
     private final UsersRepository usersRepository;
     private final DiagnosisAiService diagnosisAiService;
     private final CallAnxietyStateRepository callAnxietyStateRepository;
+    private final SensitiveInformationConsentPolicy sensitiveInformationConsentPolicy;
 
     @Transactional(readOnly = true)
     public List<DiagnosisQuestionResponse> getQuestions(DiagnosisType type) {
@@ -40,6 +46,9 @@ public class DiagnosisService {
 
     @Transactional
     public DiagnosisResultResponse submitAnswers(DiagnosisSubmitRequest request) {
+        Users user = getCurrentUser();
+        sensitiveInformationConsentPolicy.ensureAgreed(user);
+
         double score = calculateScore(request.getAnswers());
         CallPhobiaLevel level = calculateLevel(score);
 
@@ -47,11 +56,6 @@ public class DiagnosisService {
 
         String summary = diagnosisAiService.generateSummary(questions, request.getAnswers());
 
-        Users user = null;
-        if (request.getUserId() != null) {
-            user = usersRepository.findById(request.getUserId())
-                    .orElse(null);
-        }
         DiagnosisResult result = DiagnosisResult.builder()
                 .user(user)
                 .sessionId(request.getSessionId())
@@ -64,6 +68,12 @@ public class DiagnosisService {
 
         initializeCallAnxietyState(user, score, level);
         return DiagnosisResultResponse.of(score, level, summary);
+    }
+
+    private Users getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return usersRepository.findByUsername(authentication.getName())
+                .orElseThrow(() -> new ApplicationException(UsersStatusCode.USER_NOT_FOUND));
     }
 
     private double calculateScore(List<Integer> answers) {
@@ -88,10 +98,6 @@ public class DiagnosisService {
             double score,
             CallPhobiaLevel level
     ) {
-        if (user == null) {
-            return;
-        }
-
         if (callAnxietyStateRepository.existsByUser(user)) {
             return;
         }
