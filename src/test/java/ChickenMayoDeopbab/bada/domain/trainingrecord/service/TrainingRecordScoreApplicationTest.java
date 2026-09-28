@@ -5,6 +5,7 @@ import ChickenMayoDeopbab.bada.domain.callanxiety.repository.CallAnxietyStateRep
 import ChickenMayoDeopbab.bada.domain.callanxiety.service.CallAnxietyScoreCalculator;
 import ChickenMayoDeopbab.bada.domain.diagnosis.entity.CallPhobiaLevel;
 import ChickenMayoDeopbab.bada.domain.file.service.FileService;
+import ChickenMayoDeopbab.bada.domain.legalconsent.service.SensitiveInformationConsentPolicy;
 import ChickenMayoDeopbab.bada.domain.session.enums.EndReason;
 import ChickenMayoDeopbab.bada.domain.session.enums.SessionType;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.request.TrainingAnalysisRequest;
@@ -13,7 +14,7 @@ import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.AnalysisQualityStatu
 import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingAnalysisMetrics;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingRecord;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.exception.TrainingRecordStatusCode;
-import ChickenMayoDeopbab.bada.domain.trainingrecord.port.FeedbackCleanupPort;
+import ChickenMayoDeopbab.bada.domain.trainingrecord.port.TrainingDataCleanupPort;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.repository.TrainingRecordRepository;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
 import ChickenMayoDeopbab.bada.domain.user.repository.UsersRepository;
@@ -50,11 +51,14 @@ class TrainingRecordScoreApplicationTest {
     private final FileService fileService =
             mock(FileService.class);
 
-    private final FeedbackCleanupPort feedbackCleanupPort =
-            mock(FeedbackCleanupPort.class);
+    private final TrainingDataCleanupPort trainingDataCleanupPort =
+            mock(TrainingDataCleanupPort.class);
 
     private final CallAnxietyStateRepository callAnxietyStateRepository =
             mock(CallAnxietyStateRepository.class);
+
+    private final SensitiveInformationConsentPolicy sensitiveInformationConsentPolicy =
+            mock(SensitiveInformationConsentPolicy.class);
 
     private final TrainingRecordService service =
             new TrainingRecordService(
@@ -62,9 +66,10 @@ class TrainingRecordScoreApplicationTest {
                     usersRepository,
                     new ObjectMapper(),
                     fileService,
-                    feedbackCleanupPort,
+                    trainingDataCleanupPort,
                     callAnxietyStateRepository,
-                    new CallAnxietyScoreCalculator()
+                    new CallAnxietyScoreCalculator(),
+                    sensitiveInformationConsentPolicy
             );
 
     private final Users user = mock(Users.class);

@@ -48,4 +48,13 @@ public class LegalConsentController {
                 "민감정보 처리 동의가 철회되었습니다."
         );
     }
+
+    @Operation(summary = "프로필 이미지 처리 동의 철회")
+    @DeleteMapping("/profile-image")
+    public ApiResponse<LegalConsentStatusResponse> withdrawProfileImage() {
+        return ApiResponse.ok(
+                legalConsentService.withdrawProfileImage(),
+                "프로필 이미지 처리 동의가 철회되었습니다."
+        );
+    }
 }

@@ -1,6 +1,6 @@
 package ChickenMayoDeopbab.bada.domain.trainingrecord.port;
 
-public interface FeedbackCleanupPort {
+public interface TrainingDataCleanupPort {
 
     void deleteBySessionId(String sessionId);
 }

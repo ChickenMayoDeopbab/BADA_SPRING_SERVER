@@ -27,6 +27,15 @@ public record LegalConsentStatusResponse(
         @Schema(description = "민감정보 처리 최근 철회 시각")
         Instant sensitiveInformationWithdrawnAt,
 
+        @Schema(description = "현재 프로필 이미지 처리 동의 여부")
+        boolean profileImageAgreed,
+
+        @Schema(description = "프로필 이미지 처리 최근 동의 시각")
+        Instant profileImageAgreedAt,
+
+        @Schema(description = "프로필 이미지 처리 최근 철회 시각")
+        Instant profileImageWithdrawnAt,
+
         @Schema(description = "필수 약관 화면 표시 필요 여부")
         boolean legalActionRequired
 ) {
@@ -42,6 +51,9 @@ public record LegalConsentStatusResponse(
                 user.isSensitiveInformationAgreed(),
                 user.getSensitiveInformationAgreedAt(),
                 user.getSensitiveInformationWithdrawnAt(),
+                user.isProfileImageAgreed(),
+                user.getProfileImageAgreedAt(),
+                user.getProfileImageWithdrawnAt(),
                 !termsOfServiceAgreed || !privacyPolicyAcknowledged
         );
     }

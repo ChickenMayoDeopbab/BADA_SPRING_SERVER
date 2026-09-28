@@ -15,6 +15,10 @@ public record AcceptLegalConsentRequest(
 
         @Schema(description = "민감정보 처리 선택 동의 여부", example = "true")
         @NotNull(message = "민감정보 처리 동의 여부를 선택해야 합니다.")
-        Boolean sensitiveInformationAgreed
+        Boolean sensitiveInformationAgreed,
+
+        @Schema(description = "프로필 이미지 처리 선택 동의 여부", example = "false")
+        @NotNull(message = "프로필 이미지 처리 동의 여부를 선택해야 합니다.")
+        Boolean profileImageAgreed
 ) {
 }

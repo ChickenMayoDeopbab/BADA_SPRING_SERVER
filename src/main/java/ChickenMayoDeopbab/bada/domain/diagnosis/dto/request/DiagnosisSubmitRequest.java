@@ -10,8 +10,6 @@ import java.util.List;
 @Getter
 @Setter
 public class DiagnosisSubmitRequest {
-    private Long userId;
-
     @NotBlank
     private String sessionId;
 

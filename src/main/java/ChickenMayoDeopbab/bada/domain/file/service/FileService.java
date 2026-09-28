@@ -5,6 +5,7 @@ import ChickenMayoDeopbab.bada.domain.file.entity.File;
 import ChickenMayoDeopbab.bada.domain.file.enumeration.FileType;
 import ChickenMayoDeopbab.bada.domain.file.exception.FileStatusCode;
 import ChickenMayoDeopbab.bada.domain.file.repository.FileRepository;
+import ChickenMayoDeopbab.bada.domain.legalconsent.service.ProfileImageConsentPolicy;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
 import ChickenMayoDeopbab.bada.domain.user.exception.UsersStatusCode;
 import ChickenMayoDeopbab.bada.domain.user.repository.UsersRepository;
@@ -26,6 +27,7 @@ import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignReques
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -37,6 +39,7 @@ public class FileService {
     private final S3Presigner s3Presigner;
     private final FileRepository fileRepository;
     private final UsersRepository usersRepository;
+    private final ProfileImageConsentPolicy profileImageConsentPolicy;
 
     @Value("${aws.s3.bucket}")
     private String bucket;
@@ -52,6 +55,9 @@ public class FileService {
         }
 
         Users user = getUserInfo();
+        if (fileType == FileType.PROFILE) {
+            profileImageConsentPolicy.ensureAgreed(user);
+        }
         String originalFilename = multipartFile.getOriginalFilename();
         String s3Key = generateS3Key(fileType);
 
@@ -90,6 +96,31 @@ public class FileService {
                 .bucket(bucket)
                 .key(s3Key)
                 .build());
+    }
+
+    public void deleteAllByUserId(Long userId) {
+        List<File> files = fileRepository.findAllByUserId(userId);
+        deleteFiles(files);
+    }
+
+    public void deleteProfileFilesByUserId(Long userId) {
+        List<File> files = fileRepository.findAllByUserIdAndFileType(userId, FileType.PROFILE);
+        deleteFiles(files);
+    }
+
+    public void deleteObsoleteProfileFiles(Long userId, String retainedS3Key) {
+        List<File> files = fileRepository.findAllByUserIdAndFileType(userId, FileType.PROFILE)
+                .stream()
+                .filter(file -> !file.getS3Key().equals(retainedS3Key))
+                .toList();
+        deleteFiles(files);
+    }
+
+    private void deleteFiles(List<File> files) {
+        for (File file : files) {
+            deleteByKey(file.getS3Key());
+        }
+        fileRepository.deleteAll(files);
     }
 
     public String generatePresignedUrl(String s3Key) {
