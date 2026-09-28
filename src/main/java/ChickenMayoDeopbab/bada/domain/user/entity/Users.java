@@ -73,6 +73,14 @@ public class Users {
     @Column(nullable = false)
     private boolean paymentIntended = false;
 
+    private Instant termsAgreedAt;
+
+    private Instant privacyPolicyAcknowledgedAt;
+
+    private Instant sensitiveInformationAgreedAt;
+
+    private Instant sensitiveInformationWithdrawnAt;
+
 
     @PrePersist
     public void prePersist() {
@@ -113,6 +121,34 @@ public class Users {
 
     public void intendPayment() {
         this.paymentIntended = true;
+    }
+
+    public void acceptRequiredLegalDocuments(Instant acceptedAt) {
+        if (termsAgreedAt == null) {
+            termsAgreedAt = acceptedAt;
+        }
+        if (privacyPolicyAcknowledgedAt == null) {
+            privacyPolicyAcknowledgedAt = acceptedAt;
+        }
+    }
+
+    public void agreeSensitiveInformation(Instant agreedAt) {
+        if (sensitiveInformationAgreedAt != null && sensitiveInformationWithdrawnAt == null) {
+            return;
+        }
+        sensitiveInformationAgreedAt = agreedAt;
+        sensitiveInformationWithdrawnAt = null;
+    }
+
+    public void withdrawSensitiveInformation(Instant withdrawnAt) {
+        if (!isSensitiveInformationAgreed()) {
+            return;
+        }
+        sensitiveInformationWithdrawnAt = withdrawnAt;
+    }
+
+    public boolean isSensitiveInformationAgreed() {
+        return sensitiveInformationAgreedAt != null && sensitiveInformationWithdrawnAt == null;
     }
 
     public void updateModerationStatus(
