@@ -12,6 +12,11 @@ public enum LegalConsentStatusCode implements StatusCode {
             HttpStatus.FORBIDDEN,
             "LEGAL_CONSENT_001",
             "민감정보 처리 동의가 필요한 기능입니다."
+    ),
+    PROFILE_IMAGE_CONSENT_REQUIRED(
+            HttpStatus.FORBIDDEN,
+            "LEGAL_CONSENT_002",
+            "프로필 이미지 처리 동의가 필요합니다."
     );
 
     private final HttpStatus httpStatus;

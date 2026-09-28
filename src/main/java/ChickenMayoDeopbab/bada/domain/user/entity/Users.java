@@ -81,6 +81,10 @@ public class Users {
 
     private Instant sensitiveInformationWithdrawnAt;
 
+    private Instant profileImageAgreedAt;
+
+    private Instant profileImageWithdrawnAt;
+
 
     @PrePersist
     public void prePersist() {
@@ -149,6 +153,29 @@ public class Users {
 
     public boolean isSensitiveInformationAgreed() {
         return sensitiveInformationAgreedAt != null && sensitiveInformationWithdrawnAt == null;
+    }
+
+    public void agreeProfileImage(Instant agreedAt) {
+        if (profileImageAgreedAt != null && profileImageWithdrawnAt == null) {
+            return;
+        }
+        profileImageAgreedAt = agreedAt;
+        profileImageWithdrawnAt = null;
+    }
+
+    public void withdrawProfileImage(Instant withdrawnAt) {
+        if (!isProfileImageAgreed()) {
+            return;
+        }
+        profileImageWithdrawnAt = withdrawnAt;
+    }
+
+    public boolean isProfileImageAgreed() {
+        return profileImageAgreedAt != null && profileImageWithdrawnAt == null;
+    }
+
+    public void clearProfileImage() {
+        profileImage = null;
     }
 
     public void updateModerationStatus(

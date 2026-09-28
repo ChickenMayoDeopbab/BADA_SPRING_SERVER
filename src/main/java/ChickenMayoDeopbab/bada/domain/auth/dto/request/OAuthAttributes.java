@@ -53,7 +53,6 @@ public class OAuthAttributes {
                 .username("USER_" + UUID.randomUUID().toString().substring(0, 8))
                 .email(email)
                 .name(name)
-                .profileImage(picture)
                 .provider(provider)
                 .providerId(getProviderId())
                 .build();

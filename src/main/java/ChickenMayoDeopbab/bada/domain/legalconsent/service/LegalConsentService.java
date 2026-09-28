@@ -2,6 +2,7 @@ package ChickenMayoDeopbab.bada.domain.legalconsent.service;
 
 import ChickenMayoDeopbab.bada.domain.legalconsent.dto.request.AcceptLegalConsentRequest;
 import ChickenMayoDeopbab.bada.domain.legalconsent.dto.response.LegalConsentStatusResponse;
+import ChickenMayoDeopbab.bada.domain.file.service.FileService;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
 import ChickenMayoDeopbab.bada.domain.user.exception.UsersStatusCode;
 import ChickenMayoDeopbab.bada.domain.user.repository.UsersRepository;
@@ -20,6 +21,7 @@ import java.time.Instant;
 public class LegalConsentService {
 
     private final UsersRepository usersRepository;
+    private final FileService fileService;
 
     public LegalConsentStatusResponse getStatus() {
         return LegalConsentStatusResponse.from(getCurrentUser());
@@ -34,6 +36,11 @@ public class LegalConsentService {
         if (Boolean.TRUE.equals(request.sensitiveInformationAgreed())) {
             user.agreeSensitiveInformation(acceptedAt);
         }
+        if (Boolean.TRUE.equals(request.profileImageAgreed())) {
+            user.agreeProfileImage(acceptedAt);
+        } else {
+            deleteProfileImage(user, acceptedAt);
+        }
 
         return LegalConsentStatusResponse.from(user);
     }
@@ -43,6 +50,19 @@ public class LegalConsentService {
         Users user = getCurrentUser();
         user.withdrawSensitiveInformation(Instant.now());
         return LegalConsentStatusResponse.from(user);
+    }
+
+    @Transactional
+    public LegalConsentStatusResponse withdrawProfileImage() {
+        Users user = getCurrentUser();
+        deleteProfileImage(user, Instant.now());
+        return LegalConsentStatusResponse.from(user);
+    }
+
+    private void deleteProfileImage(Users user, Instant withdrawnAt) {
+        fileService.deleteProfileFilesByUserId(user.getUserId());
+        user.clearProfileImage();
+        user.withdrawProfileImage(withdrawnAt);
     }
 
     private Users getCurrentUser() {

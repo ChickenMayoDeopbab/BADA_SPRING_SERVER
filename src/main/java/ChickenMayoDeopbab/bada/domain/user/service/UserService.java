@@ -12,6 +12,7 @@ import ChickenMayoDeopbab.bada.domain.file.service.FileService;
 import ChickenMayoDeopbab.bada.domain.notification.repository.InAppNotificationRepository;
 import ChickenMayoDeopbab.bada.domain.notification.repository.NotificationSettingRepository;
 import ChickenMayoDeopbab.bada.domain.notification.repository.PushDeviceRepository;
+import ChickenMayoDeopbab.bada.domain.legalconsent.service.ProfileImageConsentPolicy;
 import ChickenMayoDeopbab.bada.domain.trainingcallschedule.repository.TrainingCallScheduleRepository;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.repository.TrainingRecordRepository;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.service.TrainingRecordService;
@@ -49,6 +50,7 @@ public class UserService {
     private final NotificationSettingRepository notificationSettingRepository;
     private final InAppNotificationRepository inAppNotificationRepository;
     private final UserDataCleanupPort userDataCleanupPort;
+    private final ProfileImageConsentPolicy profileImageConsentPolicy;
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
     private final RedisTemplate<String, String> redisTemplate;
 
@@ -96,6 +98,12 @@ public class UserService {
     public ApiResponse<Void> updateMyPage(UpdateMyPageRequest request) {
         Users user = getUserInfo();
 
+        if (request.s3Key() != null && !request.s3Key().isBlank()) {
+            profileImageConsentPolicy.ensureAgreed(user);
+            fileService.deleteObsoleteProfileFiles(user.getUserId(), request.s3Key());
+        } else {
+            fileService.deleteProfileFilesByUserId(user.getUserId());
+        }
         user.update(request.name(), request.username(), request.s3Key());
         return ApiResponse.ok("프로필이 업데이트되었습니다.");
     }
