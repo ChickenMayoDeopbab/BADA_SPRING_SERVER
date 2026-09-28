@@ -11,10 +11,12 @@ import ChickenMayoDeopbab.bada.domain.file.service.FileService;
 import ChickenMayoDeopbab.bada.domain.notification.repository.InAppNotificationRepository;
 import ChickenMayoDeopbab.bada.domain.notification.repository.NotificationSettingRepository;
 import ChickenMayoDeopbab.bada.domain.notification.repository.PushDeviceRepository;
+import ChickenMayoDeopbab.bada.domain.legalconsent.service.ProfileImageConsentPolicy;
 import ChickenMayoDeopbab.bada.domain.trainingcallschedule.repository.TrainingCallScheduleRepository;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.repository.TrainingRecordRepository;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.service.TrainingRecordService;
 import ChickenMayoDeopbab.bada.domain.user.dto.response.MyPageResponse;
+import ChickenMayoDeopbab.bada.domain.user.dto.request.UpdateMyPageRequest;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
 import ChickenMayoDeopbab.bada.domain.user.exception.UsersStatusCode;
 import ChickenMayoDeopbab.bada.domain.user.repository.UsersRepository;
@@ -63,6 +65,8 @@ class UserServiceTest {
     private final InAppNotificationRepository inAppNotificationRepository =
             mock(InAppNotificationRepository.class);
     private final UserDataCleanupPort userDataCleanupPort = mock(UserDataCleanupPort.class);
+    private final ProfileImageConsentPolicy profileImageConsentPolicy =
+            mock(ProfileImageConsentPolicy.class);
     private final BCryptPasswordEncoder bCryptPasswordEncoder = mock(BCryptPasswordEncoder.class);
 
     @SuppressWarnings("unchecked")
@@ -82,6 +86,7 @@ class UserServiceTest {
             notificationSettingRepository,
             inAppNotificationRepository,
             userDataCleanupPort,
+            profileImageConsentPolicy,
             bCryptPasswordEncoder,
             redisTemplate
     );
@@ -223,5 +228,26 @@ class UserServiceTest {
                 .isInstanceOf(ApplicationException.class)
                 .extracting(ex -> ((ApplicationException) ex).getStatusCode())
                 .isEqualTo(DiagnosisResultStatusCode.DIAGNOSIS_RESULT_NOT_FOUND);
+    }
+
+    @Test
+    void updateMyPageRequiresConsentAndDeletesPreviousProfileFiles() {
+        login();
+
+        service.updateMyPage(new UpdateMyPageRequest("이름", "아이디", "profile/new.png"));
+
+        verify(profileImageConsentPolicy).ensureAgreed(user);
+        verify(fileService).deleteObsoleteProfileFiles(7L, "profile/new.png");
+        verify(user).update("이름", "아이디", "profile/new.png");
+    }
+
+    @Test
+    void clearingProfileDeletesEveryProfileFile() {
+        login();
+
+        service.updateMyPage(new UpdateMyPageRequest("이름", "아이디", null));
+
+        verify(fileService).deleteProfileFilesByUserId(7L);
+        verify(user).update("이름", "아이디", null);
     }
 }

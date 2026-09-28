@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 import java.util.Optional;
+import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -20,7 +21,7 @@ import static org.mockito.Mockito.when;
 
 /**
  * 애플을 넣으면서 구글·네이버가 쓰던 회원 저장 로직을 이 클래스로 분리했다.
- * 분리 전 동작이 그대로인지 확인한다.
+ * 공급자 프로필 이미지는 선택 동의 범위 안에서만 저장하는지 확인한다.
  */
 class OAuthUserRegistrarTest {
 
@@ -45,6 +46,7 @@ class OAuthUserRegistrarTest {
         assertThat(saved.getProviderId()).isEqualTo("google-123");
         assertThat(saved.getEmail()).isEqualTo("a@b.com");
         assertThat(saved.getUsername()).startsWith("USER_");
+        assertThat(saved.getProfileImage()).isNull();
     }
 
     @Test
@@ -65,10 +67,11 @@ class OAuthUserRegistrarTest {
     }
 
     @Test
-    @DisplayName("기존 회원의 프로필 이미지가 비어 있을 때만 채운다")
-    void fillsProfileImageOnlyWhenAbsent() {
+    @DisplayName("프로필 이미지 동의가 있는 기존 회원의 빈 이미지만 채운다")
+    void fillsProfileImageOnlyWhenAbsentAndAgreed() {
         Users existing = Users.builder()
                 .userId(1L).provider(Provider.GOOGLE).providerId("google-123")
+                .profileImageAgreedAt(Instant.parse("2026-09-28T01:00:00Z"))
                 .profileImage(null).role(Role.USER).build();
         when(usersRepository.findByProviderAndProviderId(Provider.GOOGLE, "google-123"))
                 .thenReturn(Optional.of(existing));
@@ -78,6 +81,21 @@ class OAuthUserRegistrarTest {
 
         assertThat(result.getProfileImage()).isEqualTo("https://img/새것.png");
         verify(usersRepository).save(existing);
+    }
+
+    @Test
+    @DisplayName("프로필 이미지 동의가 없으면 공급자 이미지를 저장하지 않는다")
+    void doesNotFillProfileImageWithoutConsent() {
+        Users existing = Users.builder()
+                .userId(1L).provider(Provider.GOOGLE).providerId("google-123")
+                .profileImage(null).role(Role.USER).build();
+        when(usersRepository.findByProviderAndProviderId(Provider.GOOGLE, "google-123"))
+                .thenReturn(Optional.of(existing));
+
+        Users result = registrar.register(googleAttributes("https://img/새것.png"));
+
+        assertThat(result.getProfileImage()).isNull();
+        verify(usersRepository, never()).save(any(Users.class));
     }
 
     @Test
