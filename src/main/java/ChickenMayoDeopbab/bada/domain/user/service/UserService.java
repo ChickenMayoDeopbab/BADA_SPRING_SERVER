@@ -8,6 +8,10 @@ import ChickenMayoDeopbab.bada.domain.attendance.repository.AttendanceRepository
 import ChickenMayoDeopbab.bada.domain.diagnosis.entity.DiagnosisResult;
 import ChickenMayoDeopbab.bada.domain.diagnosis.exception.DiagnosisResultStatusCode;
 import ChickenMayoDeopbab.bada.domain.diagnosis.repository.DiagnosisResultRepository;
+import ChickenMayoDeopbab.bada.domain.file.service.FileService;
+import ChickenMayoDeopbab.bada.domain.notification.repository.InAppNotificationRepository;
+import ChickenMayoDeopbab.bada.domain.notification.repository.NotificationSettingRepository;
+import ChickenMayoDeopbab.bada.domain.notification.repository.PushDeviceRepository;
 import ChickenMayoDeopbab.bada.domain.trainingcallschedule.repository.TrainingCallScheduleRepository;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.repository.TrainingRecordRepository;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.service.TrainingRecordService;
@@ -17,6 +21,7 @@ import ChickenMayoDeopbab.bada.domain.user.dto.response.MyPageResponse;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
 import ChickenMayoDeopbab.bada.domain.user.exception.UsersStatusCode;
 import ChickenMayoDeopbab.bada.domain.user.repository.UsersRepository;
+import ChickenMayoDeopbab.bada.domain.user.port.UserDataCleanupPort;
 import ChickenMayoDeopbab.bada.global.common.ApiResponse;
 import ChickenMayoDeopbab.bada.global.exception.ApplicationException;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +44,11 @@ public class UserService {
     private final TrainingRecordRepository trainingRecordRepository;
     private final TrainingRecordService trainingRecordService;
     private final TrainingCallScheduleRepository trainingCallScheduleRepository;
+    private final FileService fileService;
+    private final PushDeviceRepository pushDeviceRepository;
+    private final NotificationSettingRepository notificationSettingRepository;
+    private final InAppNotificationRepository inAppNotificationRepository;
+    private final UserDataCleanupPort userDataCleanupPort;
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
     private final RedisTemplate<String, String> redisTemplate;
 
@@ -56,9 +66,15 @@ public class UserService {
         Users user = getUserInfo();
         Long userId = user.getUserId();
 
+        userDataCleanupPort.deleteByUserId(userId);
         trainingRecordService.deleteAllByUser(user);
+        fileService.deleteAllByUserId(userId);
         trainingCallScheduleRepository.deleteAllByUser(user);
         attendanceRepository.deleteAllByUser(user);
+        pushDeviceRepository.deleteAllByUser(user);
+        notificationSettingRepository.deleteByUser(user);
+        inAppNotificationRepository.deleteAllByRecipient(user);
+        inAppNotificationRepository.anonymizeActorByUserId(userId);
         callAnxietyStateRepository.deleteByUser(user);
         diagnosisResultRepository.deleteAllByUser(user);
 

@@ -16,4 +16,6 @@ public interface PushDeviceRepository extends JpaRepository<PushDevice, Long> {
     List<PushDevice> findAllByUser(Users user);
 
     void deleteByInstallationIdAndUser(String installationId, Users user);
+
+    void deleteAllByUser(Users user);
 }

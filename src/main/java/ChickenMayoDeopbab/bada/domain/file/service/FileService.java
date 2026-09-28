@@ -26,6 +26,7 @@ import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignReques
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -90,6 +91,14 @@ public class FileService {
                 .bucket(bucket)
                 .key(s3Key)
                 .build());
+    }
+
+    public void deleteAllByUserId(Long userId) {
+        List<File> files = fileRepository.findAllByUserId(userId);
+        for (File file : files) {
+            deleteByKey(file.getS3Key());
+        }
+        fileRepository.deleteAll(files);
     }
 
     public String generatePresignedUrl(String s3Key) {
