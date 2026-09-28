@@ -56,6 +56,7 @@ public class TrainingRecordService {
     private final CallAnxietyStateRepository callAnxietyStateRepository;
     private final CallAnxietyScoreCalculator callAnxietyScoreCalculator;
     private final SensitiveInformationConsentPolicy sensitiveInformationConsentPolicy;
+    private final RecordingPlaybackService recordingPlaybackService;
     private static final String OTHER_CATEGORY = "other";
     private static final Map<String, String> CATEGORY_ICON_KEYS = Map.of(
             "work", "scenario_profile/9c59b8ee-46d0-4207-bed0-ab7136104fef",
@@ -178,7 +179,7 @@ public class TrainingRecordService {
         TrainingRecord record = trainingRecordRepository.findByRecordIdAndUser(recordId, user)
                 .orElseThrow(() -> new ApplicationException(TrainingRecordStatusCode.RECORD_NOT_FOUND));
 
-        String recordingUrl = resolveRecordingUrl(record.getRecordingKey());
+        String recordingUrl = recordingPlaybackService.playbackUrl(record);
         return TrainingRecordDetailResponse.of(
                 record,
                 recordingUrl,
@@ -197,7 +198,7 @@ public class TrainingRecordService {
         return FeedbackResponse.of(
                 trainingRecord,
                 parseGoodSegments(trainingRecord.getGoodSegments()),
-                resolveRecordingUrl(trainingRecord.getRecordingKey()),
+                recordingPlaybackService.playbackUrl(trainingRecord),
                 parseTranscript(trainingRecord.getTranscript())
         );
     }
@@ -387,13 +388,6 @@ public class TrainingRecordService {
         if (recordingKey != null && !recordingKey.isBlank()) {
             fileService.deleteByKey(recordingKey);
         }
-    }
-
-    private String resolveRecordingUrl(String recordingKey) {
-        if (recordingKey == null || recordingKey.isBlank()) {
-            return null;
-        }
-        return fileService.generatePresignedUrl(recordingKey);
     }
 
     private Users getUserInfo() {

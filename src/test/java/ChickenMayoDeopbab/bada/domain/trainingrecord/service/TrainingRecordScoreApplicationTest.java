@@ -69,7 +69,8 @@ class TrainingRecordScoreApplicationTest {
                     trainingDataCleanupPort,
                     callAnxietyStateRepository,
                     new CallAnxietyScoreCalculator(),
-                    sensitiveInformationConsentPolicy
+                    sensitiveInformationConsentPolicy,
+                    mock(RecordingPlaybackService.class)
             );
 
     private final Users user = mock(Users.class);

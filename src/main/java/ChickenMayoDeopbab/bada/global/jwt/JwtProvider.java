@@ -18,6 +18,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Optional;
@@ -25,6 +26,9 @@ import java.util.Optional;
 @Component
 @Slf4j
 public class JwtProvider {
+
+    private static final String RECORDING_TYPE = "RECORDING";
+    private static final Duration RECORDING_TTL = Duration.ofMinutes(10);
 
     private final SecretKey secretKey;
     @Getter
@@ -61,6 +65,32 @@ public class JwtProvider {
             builder.claim("role", role.getValue());
         }
         return builder.compact();
+    }
+
+    // 녹음 재생 링크용. type 이 ACCESS 가 아니라서 일반 API 인증에는 쓰이지 않는다.
+    public String createRecordingToken(Long userId, Long recordId) {
+        Date now = new Date();
+        return Jwts.builder()
+                .subject(String.valueOf(userId))
+                .claim("type", RECORDING_TYPE)
+                .claim("rid", recordId)
+                .issuedAt(now)
+                .expiration(new Date(now.getTime() + RECORDING_TTL.toMillis()))
+                .signWith(secretKey)
+                .compact();
+    }
+
+    public RecordingGrant parseRecordingToken(String token) {
+        validateToken(token);
+        Claims claims = parseClaims(token);
+        Object recordId = claims.get("rid");
+        if (!RECORDING_TYPE.equals(claims.get("type")) || !(recordId instanceof Number)) {
+            throw ApplicationException.of(JwtStatusCode.TOKEN_INVALID);
+        }
+        return new RecordingGrant(Long.parseLong(claims.getSubject()), ((Number) recordId).longValue());
+    }
+
+    public record RecordingGrant(Long userId, Long recordId) {
     }
 
     public Long getUserIdFromToken(String token) {

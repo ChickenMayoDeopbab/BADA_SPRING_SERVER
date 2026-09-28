@@ -137,6 +137,14 @@ public class FileService {
         return s3Presigner.presignGetObject(presignRequest).url().toString();
     }
 
+    public byte[] download(String s3Key) {
+        GetObjectRequest request = GetObjectRequest.builder()
+                .bucket(bucket)
+                .key(s3Key)
+                .build();
+        return s3Client.getObjectAsBytes(request).asByteArray();
+    }
+
     private void putObject(MultipartFile multipartFile, String s3Key) {
         PutObjectRequest request = PutObjectRequest.builder()
                 .bucket(bucket)

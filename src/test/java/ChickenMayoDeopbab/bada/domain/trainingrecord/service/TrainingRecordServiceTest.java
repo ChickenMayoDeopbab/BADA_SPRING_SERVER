@@ -58,6 +58,7 @@ class TrainingRecordServiceTest {
             mock(CallAnxietyStateRepository.class);
     private final SensitiveInformationConsentPolicy sensitiveInformationConsentPolicy =
             mock(SensitiveInformationConsentPolicy.class);
+    private final RecordingPlaybackService recordingPlaybackService = mock(RecordingPlaybackService.class);
     private final TrainingRecordService service = new TrainingRecordService(
             trainingRecordRepository,
             usersRepository,
@@ -66,7 +67,8 @@ class TrainingRecordServiceTest {
             trainingDataCleanupPort,
             callAnxietyStateRepository,
             new CallAnxietyScoreCalculator(),
-            sensitiveInformationConsentPolicy
+            sensitiveInformationConsentPolicy,
+            recordingPlaybackService
     );
 
     private final Users user = mock(Users.class);
@@ -397,6 +399,9 @@ class TrainingRecordServiceTest {
             ]
             """;
 
+    private static final String PLAYBACK_URL =
+            "https://api.bada.test/api/v1/training-records/1/recording?token=t";
+
     private static final String GOOD_SEGMENTS_JSON = """
             [
               {"start":1.5,"end":3.0,"good_point":"인사를 또렷하게 했어요"}
@@ -430,15 +435,16 @@ class TrainingRecordServiceTest {
 
     @Test
     void feedbackReturnsParsedTranscriptWithOtherFields() {
-        loginForFeedback(feedbackRecord(TRANSCRIPT_JSON, GOOD_SEGMENTS_JSON, "recordings/sess-1.wav"));
-        when(fileService.generatePresignedUrl("recordings/sess-1.wav")).thenReturn("https://s3/sess-1.wav");
+        TrainingRecord found = feedbackRecord(TRANSCRIPT_JSON, GOOD_SEGMENTS_JSON, "recordings/sess-1.wav");
+        loginForFeedback(found);
+        when(recordingPlaybackService.playbackUrl(found)).thenReturn(PLAYBACK_URL);
 
         FeedbackResponse response = service.getFeedback(10L);
 
         assertThat(response.sessionType()).isEqualTo(SessionType.SCENARIO);
         assertThat(response.scenarioName()).isEqualTo("병원 예약 전화");
         assertThat(response.trainingTime()).isEqualTo(LocalTime.of(0, 1, 30));
-        assertThat(response.recordingUrl()).isEqualTo("https://s3/sess-1.wav");
+        assertThat(response.recordingUrl()).isEqualTo(PLAYBACK_URL);
         assertThat(response.goodSegments())
                 .containsExactly(new GoodSegment(1.5, 3.0, "인사를 또렷하게 했어요"));
         assertThat(response.transcript()).containsExactly(

@@ -25,7 +25,9 @@ public final class PublicEndpoints {
             "/api/v1/auth/google",
             "/api/v1/auth/naver",
             "/api/v1/auth/apple",
-            "/api/diagnosis/questions"
+            "/api/diagnosis/questions",
+            // 녹음 재생: 인증 헤더 대신 링크의 재생 토큰으로 확인
+            "/api/v1/training-records/*/recording"
     };
 
     public static final String[] ANY = {
