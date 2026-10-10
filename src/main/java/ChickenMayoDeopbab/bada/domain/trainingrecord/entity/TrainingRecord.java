@@ -88,7 +88,7 @@ public class TrainingRecord {
 
     private Short anxietyScore;
 
-    @Column(precision = 6, scale = 4)
+    @Column(precision = 7, scale = 4)
     private BigDecimal performanceScore;
 
     @Column(precision = 6, scale = 4)
