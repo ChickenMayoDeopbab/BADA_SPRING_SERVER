@@ -10,12 +10,18 @@ public class DiagnosisQuestionResponse {
     private Long questionId;
     private String content;
     private int orderIndex;
+    private String questionnaireVersion;
 
     public static DiagnosisQuestionResponse from(DiagnosisQuestion question) {
+        return from(question, null);
+    }
+
+    public static DiagnosisQuestionResponse from(DiagnosisQuestion question, String version) {
         return DiagnosisQuestionResponse.builder()
                 .questionId(question.getQuestionId())
                 .content(question.getContent())
                 .orderIndex(question.getOrderIndex())
+                .questionnaireVersion(version)
                 .build();
     }
 }

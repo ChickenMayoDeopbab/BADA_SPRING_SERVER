@@ -6,8 +6,11 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Getter
@@ -40,6 +43,15 @@ public class DiagnosisResult {
 
     @Column(columnDefinition = "TEXT")
     private String summary;
+
+    private String questionnaireVersion;
+    private Boolean questionnaireVersionConfirmed;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private List<AnswerSnapshot> answerSnapshot;
+
+    public record AnswerSnapshot(Long questionId, String content, int orderIndex, int value) {}
 
     @Column(nullable = false)
     private LocalDateTime createdAt;

@@ -33,6 +33,7 @@ public interface DiagnosisResultRepository extends JpaRepository<DiagnosisResult
     );
 
     Optional<DiagnosisResult> findFirstByUserOrderByCreatedAtDesc(Users user);
+    Optional<DiagnosisResult> findFirstByUserAndSessionIdOrderByCreatedAtAsc(Users user, String sessionId);
 
     @Modifying(flushAutomatically = true)
     @Query("delete from DiagnosisResult d where d.user = :user")
