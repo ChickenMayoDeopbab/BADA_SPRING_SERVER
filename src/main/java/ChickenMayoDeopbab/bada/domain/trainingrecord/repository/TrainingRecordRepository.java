@@ -57,6 +57,9 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
 
     List<TrainingRecord> findAllByUser(Users user);
 
+    @Query("select record from TrainingRecord record where record.user.userId in :userIds and record.endedAt <= :asOf")
+    List<TrainingRecord> findForEvaluation(Collection<Long> userIds, LocalDateTime asOf);
+
     @Query("""
         select new ChickenMayoDeopbab.bada.domain.adminstatistics.model.AppliedTrainingStatisticsRow(
             training.user.userId,

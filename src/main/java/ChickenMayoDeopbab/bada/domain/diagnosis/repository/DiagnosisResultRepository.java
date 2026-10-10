@@ -10,9 +10,16 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Collection;
+import java.time.LocalDateTime;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import java.util.Optional;
 
 public interface DiagnosisResultRepository extends JpaRepository<DiagnosisResult, Integer> {
+
+    @Query("select result from DiagnosisResult result where result.user.userId in :userIds and result.createdAt <= :asOf")
+    List<DiagnosisResult> findForEvaluation(Collection<Long> userIds, LocalDateTime asOf);
 
     @Query("""
         select new ChickenMayoDeopbab.bada.domain.adminstatistics.model.SelfAssessmentStatisticsRow(
@@ -34,6 +41,7 @@ public interface DiagnosisResultRepository extends JpaRepository<DiagnosisResult
 
     Optional<DiagnosisResult> findFirstByUserOrderByCreatedAtDesc(Users user);
     Optional<DiagnosisResult> findFirstByUserAndSessionIdOrderByCreatedAtAsc(Users user, String sessionId);
+    Page<DiagnosisResult> findByUserUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
 
     @Modifying(flushAutomatically = true)
     @Query("delete from DiagnosisResult d where d.user = :user")
