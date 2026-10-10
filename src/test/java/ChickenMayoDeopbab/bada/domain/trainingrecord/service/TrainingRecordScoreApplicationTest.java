@@ -25,6 +25,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -70,7 +71,8 @@ class TrainingRecordScoreApplicationTest {
                     callAnxietyStateRepository,
                     new CallAnxietyScoreCalculator(),
                     sensitiveInformationConsentPolicy,
-                    mock(RecordingPlaybackService.class)
+                    mock(RecordingPlaybackService.class),
+                    mock(org.springframework.context.ApplicationEventPublisher.class)
             );
 
     private final Users user = mock(Users.class);
@@ -147,7 +149,7 @@ class TrainingRecordScoreApplicationTest {
         assertThat(retry.scoreSequence()).isEqualTo(1L);
         assertThat(state.getValidTrainingCount()).isEqualTo(1);
 
-        verify(callAnxietyStateRepository, times(1))
+        verify(callAnxietyStateRepository, times(2))
                 .findByUserForUpdate(user);
     }
 
@@ -195,7 +197,7 @@ class TrainingRecordScoreApplicationTest {
                 .isEqualTo("INSUFFICIENT_USER_SPEECH");
         assertThat(response.scoreAfter()).isNull();
 
-        verify(callAnxietyStateRepository, never())
+        verify(callAnxietyStateRepository, times(1))
                 .findByUserForUpdate(any());
     }
 
@@ -222,7 +224,7 @@ class TrainingRecordScoreApplicationTest {
                 .isEqualTo("INCOMPLETE_TRAINING");
         assertThat(record.getAnxietyScore()).isEqualTo((short) 5);
 
-        verify(callAnxietyStateRepository, never())
+        verify(callAnxietyStateRepository, times(1))
                 .findByUserForUpdate(any());
     }
 
@@ -251,6 +253,39 @@ class TrainingRecordScoreApplicationTest {
         assertThat(record.getScoreApplied()).isFalse();
         assertThat(record.getScoreExclusionReason())
                 .isEqualTo("MISSING_CALL_ANXIETY_STATE");
+    }
+
+    @Test
+    void deletionReplaysRemainingScoresWithoutReusingTheirSequenceNumbers() {
+        CallAnxietyState state = createState();
+        CallAnxietyScoreCalculator calculator = new CallAnxietyScoreCalculator();
+        TrainingRecord first = createRecord(passedAnalysis());
+        TrainingRecord second = createRecord(passedAnalysis());
+        TrainingRecord third = createRecord(passedAnalysis());
+        List<TrainingRecord> records = List.of(first, second, third);
+        for (int index = 0; index < records.size(); index++) {
+            TrainingRecord record = records.get(index);
+            ReflectionTestUtils.setField(record, "recordId", (long) index + 1);
+            BigDecimal before = state.getCurrentCallAnxietyIndex();
+            var calculation = calculator.calculate(before, new BigDecimal("80"),
+                    new BigDecimal("75"), new BigDecimal("70"), 5);
+            record.applyScore((short) 5, calculation, before, index + 1,
+                    CallAnxietyState.SCORING_VERSION, LocalDateTime.of(2026, 10, 10, index, 0));
+            state.applyValidTraining(calculation.newCurrentCallAnxietyIndex(),
+                    calculator.calculateLevel(calculation.newCurrentCallAnxietyIndex()));
+        }
+        when(callAnxietyStateRepository.findByUserForUpdate(user)).thenReturn(Optional.of(state));
+        when(trainingRecordRepository.findByRecordIdAndUserForUpdate(2L, user)).thenReturn(Optional.of(second));
+        when(trainingRecordRepository.findAllByUser(user)).thenReturn(records);
+
+        service.deleteTrainingRecord(2L);
+
+        assertThat(state.getValidTrainingCount()).isEqualTo(2);
+        assertThat(state.getCurrentCallAnxietyIndex()).isEqualByComparingTo("2.9240");
+        assertThat(third.getScoreBefore()).isEqualByComparingTo(first.getScoreAfter());
+        assertThat(third.getScoreSequence()).isEqualTo(3L);
+        assertThat(third.getScoreAppliedAt()).isEqualTo(LocalDateTime.of(2026, 10, 10, 2, 0));
+        verify(trainingRecordRepository).delete(second);
     }
 
     private void mockRecordAndState(
