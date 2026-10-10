@@ -54,6 +54,7 @@ public class TrainingRecord {
     private String scenarioVersion;
 
     private String difficulty;
+    private Integer scriptLevel;
 
     @Embedded
     private TrainingAnalysisMetrics analysis;
@@ -124,6 +125,7 @@ public class TrainingRecord {
             String scenarioName,
             String scenarioVersion,
             String difficulty,
+            Integer scriptLevel,
             TrainingAnalysisMetrics analysis,
             SessionType sessionType,
             AiPersonality aiPersonality,
@@ -141,6 +143,7 @@ public class TrainingRecord {
         this.scenarioName = scenarioName;
         this.scenarioVersion = scenarioVersion;
         this.difficulty = difficulty;
+        this.scriptLevel = scriptLevel;
         this.analysis = analysis;
         this.scoreApplied = false;
         this.sessionType = sessionType;
