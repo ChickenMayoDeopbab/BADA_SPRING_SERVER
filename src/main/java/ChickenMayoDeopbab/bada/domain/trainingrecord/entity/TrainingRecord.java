@@ -88,6 +88,7 @@ public class TrainingRecord {
     private String recordingKey;
 
     private Short anxietyScore;
+    private LocalDateTime anxietyRecordedAt;
 
     @Column(precision = 7, scale = 4)
     private BigDecimal performanceScore;
@@ -159,6 +160,7 @@ public class TrainingRecord {
 
     public void recordAnxietyScore(Short score) {
         this.anxietyScore = score;
+        this.anxietyRecordedAt = LocalDateTime.now();
     }
 
 
@@ -188,6 +190,7 @@ public class TrainingRecord {
             LocalDateTime appliedAt
     ) {
         this.anxietyScore = anxietyScore;
+        if (this.anxietyRecordedAt == null) { this.anxietyRecordedAt = appliedAt; }
 
         this.performanceScore =
                 calculation.performanceScore();
@@ -219,6 +222,7 @@ public class TrainingRecord {
             String scoringVersion
     ) {
         this.anxietyScore = anxietyScore;
+        if (this.anxietyRecordedAt == null) { this.anxietyRecordedAt = LocalDateTime.now(); }
         this.scoreApplied = false;
         this.scoreAppliedAt = null;
         this.scoreExclusionReason = exclusionReason;
