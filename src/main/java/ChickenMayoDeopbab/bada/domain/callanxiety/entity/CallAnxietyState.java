@@ -144,6 +144,14 @@ public class CallAnxietyState {
     }
 
     // 실제 점수 반영 단계에서 사용
+    public void resetTrainingProgress() {
+        this.currentCallAnxietyIndex = initialSelfReportScore;
+        this.currentLevel = initialLevel;
+        this.validTrainingCount = 0;
+        clearCandidate();
+        this.updatedAt = LocalDateTime.now();
+    }
+
     public void applyValidTraining(
             BigDecimal newCurrentIndex,
             CallPhobiaLevel calculatedLevel

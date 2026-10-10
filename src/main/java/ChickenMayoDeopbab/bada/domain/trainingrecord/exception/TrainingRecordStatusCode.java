@@ -13,7 +13,8 @@ public enum TrainingRecordStatusCode implements StatusCode {
     ANXIETY_SCORE_NOT_ALLOWED(HttpStatus.CONFLICT, "TRAINING_RECORD_003", "해당 훈련에는 불안 점수를 기록할 수 없습니다."),
     CALL_ANXIETY_STATE_NOT_FOUND(HttpStatus.CONFLICT, "TRAINING_RECORD_004", "최초 자가진단 상태를 찾을 수 없습니다."),
     SCORE_APPLIED_RECORD_CANNOT_BE_DELETED(HttpStatus.CONFLICT, "TRAINING_RECORD_005", "점수에 반영된 훈련 기록은 삭제할 수 없습니다."),
-    RECORDING_NOT_FOUND(HttpStatus.NOT_FOUND, "TRAINING_RECORD_006", "훈련 녹음을 찾을 수 없습니다.");
+    RECORDING_NOT_FOUND(HttpStatus.NOT_FOUND, "TRAINING_RECORD_006", "훈련 녹음을 찾을 수 없습니다."),
+    SCORE_RECALCULATION_UNSUPPORTED(HttpStatus.CONFLICT, "TRAINING_RECORD_007", "원본 자료 또는 계산 버전이 없어 삭제 후 점수를 재계산할 수 없습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
