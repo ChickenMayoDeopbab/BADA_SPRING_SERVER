@@ -68,7 +68,8 @@ class TrainingRecordServiceTest {
             callAnxietyStateRepository,
             new CallAnxietyScoreCalculator(),
             sensitiveInformationConsentPolicy,
-            recordingPlaybackService
+            recordingPlaybackService,
+            mock(org.springframework.context.ApplicationEventPublisher.class)
     );
 
     private final Users user = mock(Users.class);
@@ -95,6 +96,8 @@ class TrainingRecordServiceTest {
                 new UsernamePasswordAuthenticationToken("junha", null));
         when(usersRepository.findByUsername("junha")).thenReturn(Optional.of(user));
         when(trainingRecordRepository.findByRecordIdAndUser(1L, user))
+                .thenReturn(Optional.ofNullable(found));
+        when(trainingRecordRepository.findByRecordIdAndUserForUpdate(1L, user))
                 .thenReturn(Optional.ofNullable(found));
     }
 

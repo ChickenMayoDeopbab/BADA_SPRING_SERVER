@@ -31,11 +31,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.context.ApplicationEventPublisher;
+import ChickenMayoDeopbab.bada.domain.trainingrecord.model.TrainingDataRemoved;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -57,6 +60,7 @@ public class TrainingRecordService {
     private final CallAnxietyScoreCalculator callAnxietyScoreCalculator;
     private final SensitiveInformationConsentPolicy sensitiveInformationConsentPolicy;
     private final RecordingPlaybackService recordingPlaybackService;
+    private final ApplicationEventPublisher events;
     private static final String OTHER_CATEGORY = "other";
     private static final Map<String, String> CATEGORY_ICON_KEYS = Map.of(
             "work", "scenario_profile/9c59b8ee-46d0-4207-bed0-ab7136104fef",
@@ -206,19 +210,27 @@ public class TrainingRecordService {
     @Transactional
     public void deleteTrainingRecord(Long recordId) {
         Users user = getUserInfo();
-        TrainingRecord record = trainingRecordRepository.findByRecordIdAndUser(recordId, user)
+        CallAnxietyState state = callAnxietyStateRepository.findByUserForUpdate(user).orElse(null);
+        TrainingRecord record = trainingRecordRepository.findByRecordIdAndUserForUpdate(recordId, user)
                 .orElseThrow(() -> new ApplicationException(TrainingRecordStatusCode.RECORD_NOT_FOUND));
 
+        if (state != null && record.isScoreApplied()) {
+            rebuildTrainingProgress(user, state, recordId);
+        }
         deleteExternalTrainingData(record);
 
         trainingRecordRepository.delete(record);
+        events.publishEvent(new TrainingDataRemoved(user.getUserId(), recordId));
     }
 
     // 회원 탈퇴 시 해당 사용자의 훈련 기록과 외부 리소스(S3 녹음, AI 피드백)를 함께 정리
     @Transactional
     public void deleteAllByUser(Users user) {
+        CallAnxietyState state = callAnxietyStateRepository.findByUserForUpdate(user).orElse(null);
         List<TrainingRecord> records = trainingRecordRepository.findAllByUser(user);
         if (records.isEmpty()) {
+            if (state != null) { state.resetTrainingProgress(); }
+            events.publishEvent(new TrainingDataRemoved(user.getUserId(), null));
             return;
         }
 
@@ -227,6 +239,10 @@ public class TrainingRecordService {
         }
 
         trainingRecordRepository.deleteAll(records);
+        if (state != null) {
+            state.resetTrainingProgress();
+        }
+        events.publishEvent(new TrainingDataRemoved(user.getUserId(), null));
     }
 
     @Transactional
@@ -239,6 +255,8 @@ public class TrainingRecordService {
         Users user = getUserInfo();
         sensitiveInformationConsentPolicy.ensureAgreed(user);
 
+        // 삭제와 점수 반영 모두 상태 -> 기록 순서로 잠가 같은 사용자의 변경을 직렬화한다.
+        CallAnxietyState state = callAnxietyStateRepository.findByUserForUpdate(user).orElse(null);
         TrainingRecord record = trainingRecordRepository
                 .findBySessionIdAndUser(sessionId, user)
                 .orElseThrow(() -> new ApplicationException(
@@ -310,10 +328,6 @@ public class TrainingRecordService {
             );
         }
 
-        CallAnxietyState state = callAnxietyStateRepository
-                .findByUserForUpdate(user)
-                .orElse(null);
-
         if (state == null) {
             // 상태 테이블 도입 전에 가입한 사용자는 초기 상태가 없을 수 있다.
             // 집계 점수는 제외하되 사용자가 입력한 주관적 불안 점수는 보존한다.
@@ -358,7 +372,7 @@ public class TrainingRecordService {
                 );
 
         long scoreSequence =
-                (long) state.getValidTrainingCount() + 1L;
+                trainingRecordRepository.findMaximumScoreSequenceByUser(user) + 1L;
 
         LocalDateTime appliedAt =
                 LocalDateTime.now();
@@ -379,6 +393,34 @@ public class TrainingRecordService {
         );
 
         return AnxietyScoreResponse.from(record);
+    }
+
+    private void rebuildTrainingProgress(Users user, CallAnxietyState state, Long deletedRecordId) {
+        List<TrainingRecord> remaining = trainingRecordRepository.findAllByUser(user).stream()
+                .filter(record -> !Objects.equals(record.getRecordId(), deletedRecordId))
+                .filter(TrainingRecord::isScoreApplied)
+                .toList();
+        if (!Objects.equals(state.getScoringVersion(), CallAnxietyState.SCORING_VERSION)
+                || remaining.stream().anyMatch(record -> record.getScoreSequence() == null
+                || !Objects.equals(record.getScoringVersion(), state.getScoringVersion())
+                || record.getAnalysis() == null || !record.getAnalysis().hasValidObjectiveScores()
+                || record.getAnxietyScore() == null)) {
+            throw new ApplicationException(TrainingRecordStatusCode.SCORE_RECALCULATION_UNSUPPORTED);
+        }
+        state.resetTrainingProgress();
+        for (TrainingRecord record : remaining.stream()
+                .sorted(Comparator.comparing(TrainingRecord::getScoreSequence)).toList()) {
+            TrainingAnalysisMetrics analysis = record.getAnalysis();
+            BigDecimal before = state.getCurrentCallAnxietyIndex();
+            CallAnxietyCalculation calculation = callAnxietyScoreCalculator.calculate(before,
+                    analysis.getStabilityScore(), analysis.getConversationScore(), analysis.getFluencyScore(),
+                    record.getAnxietyScore());
+            state.applyValidTraining(calculation.newCurrentCallAnxietyIndex(),
+                    callAnxietyScoreCalculator.calculateLevel(calculation.newCurrentCallAnxietyIndex()));
+            // 순서와 최초 반영 시각은 보존하고, 삭제로 달라진 파생 점수만 갱신한다.
+            record.applyScore(record.getAnxietyScore(), calculation, before, record.getScoreSequence(),
+                    record.getScoringVersion(), record.getScoreAppliedAt());
+        }
     }
 
     private void deleteExternalTrainingData(TrainingRecord record) {

@@ -9,6 +9,7 @@ import ChickenMayoDeopbab.bada.domain.diagnosis.entity.CallPhobiaLevel;
 import ChickenMayoDeopbab.bada.domain.diagnosis.entity.DiagnosisQuestion;
 import ChickenMayoDeopbab.bada.domain.diagnosis.entity.DiagnosisResult;
 import ChickenMayoDeopbab.bada.domain.diagnosis.entity.DiagnosisType;
+import ChickenMayoDeopbab.bada.domain.diagnosis.exception.DiagnosisResultStatusCode;
 import ChickenMayoDeopbab.bada.domain.diagnosis.repository.DiagnosisRepository;
 import ChickenMayoDeopbab.bada.domain.diagnosis.repository.DiagnosisResultRepository;
 import ChickenMayoDeopbab.bada.domain.legalconsent.service.SensitiveInformationConsentPolicy;
@@ -25,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.IntStream;
 
 @RequiredArgsConstructor
 @Service
@@ -38,9 +40,11 @@ public class DiagnosisService {
 
     @Transactional(readOnly = true)
     public List<DiagnosisQuestionResponse> getQuestions(DiagnosisType type) {
-        return diagnosisRepository.findByTypeOrderByOrderIndex(type)
+        List<DiagnosisQuestion> questions = diagnosisRepository.findByTypeOrderByOrderIndex(type);
+        String version = DiagnosisQuestionnaire.version(type, questions);
+        return questions
                 .stream()
-                .map(DiagnosisQuestionResponse::from)
+                .map(question -> DiagnosisQuestionResponse.from(question, version))
                 .toList();
     }
 
@@ -49,12 +53,22 @@ public class DiagnosisService {
         Users user = getCurrentUser();
         sensitiveInformationConsentPolicy.ensureAgreed(user);
 
-        double score = calculateScore(request.getAnswers());
+        List<DiagnosisQuestion> questions = diagnosisRepository.findByTypeOrderByOrderIndex(request.getType());
+        List<Integer> answers = DiagnosisQuestionnaire.answers(request, questions);
+        DiagnosisResult existing = diagnosisResultRepository.findFirstByUserAndSessionIdOrderByCreatedAtAsc(user, request.getSessionId()).orElse(null);
+        if (existing != null) {
+            if (existing.getType() != request.getType() || existing.getAnswerSnapshot() == null
+                    || !existing.getAnswerSnapshot().stream().map(DiagnosisResult.AnswerSnapshot::value).toList().equals(answers)
+                    || !DiagnosisQuestionnaire.version(request.getType(), questions).equals(existing.getQuestionnaireVersion())) {
+                throw new ApplicationException(DiagnosisResultStatusCode.DIAGNOSIS_SESSION_CONFLICT);
+            }
+            return DiagnosisResultResponse.from(existing);
+        }
+
+        double score = calculateScore(answers);
         CallPhobiaLevel level = calculateLevel(score);
 
-        List<DiagnosisQuestion> questions = diagnosisRepository.findByTypeOrderByOrderIndex(request.getType());
-
-        String summary = diagnosisAiService.generateSummary(questions, request.getAnswers());
+        String summary = diagnosisAiService.generateSummary(questions, answers);
 
         DiagnosisResult result = DiagnosisResult.builder()
                 .user(user)
@@ -63,16 +77,23 @@ public class DiagnosisService {
                 .score(score)
                 .level(level)
                 .summary(summary)
+                .questionnaireVersion(DiagnosisQuestionnaire.version(request.getType(), questions))
+                .questionnaireVersionConfirmed(request.getQuestionnaireVersion() != null)
+                .answerSnapshot(IntStream.range(0, questions.size()).mapToObj(index -> {
+                    DiagnosisQuestion question = questions.get(index);
+                    return new DiagnosisResult.AnswerSnapshot(question.getQuestionId(), question.getContent(),
+                            question.getOrderIndex(), answers.get(index));
+                }).toList())
                 .build();
         diagnosisResultRepository.save(result);
 
         initializeCallAnxietyState(user, score, level);
-        return DiagnosisResultResponse.of(score, level, summary);
+        return DiagnosisResultResponse.from(result);
     }
 
     private Users getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        return usersRepository.findByUsername(authentication.getName())
+        return usersRepository.findByUsernameForDiagnosisUpdate(authentication.getName())
                 .orElseThrow(() -> new ApplicationException(UsersStatusCode.USER_NOT_FOUND));
     }
 

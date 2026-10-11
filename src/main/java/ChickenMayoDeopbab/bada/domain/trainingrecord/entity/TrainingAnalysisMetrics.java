@@ -9,6 +9,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.Map;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Getter
 @Embeddable
@@ -60,6 +63,14 @@ public class TrainingAnalysisMetrics {
     @Column(name = "analysis_policy_version", length = 50)
     private String analysisPolicyVersion;
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private Map<String, AnalysisQualityStatus> metricQuality;
+    private Integer unansweredUserTurnCount;
+    private Integer unrecognizedUserTurnCount;
+    private Long leadingSilenceDurationMs;
+    private Long trailingSilenceDurationMs;
+
     private TrainingAnalysisMetrics(TrainingAnalysisRequest request) {
         this.stabilityScore = request.stabilityScore();
         this.conversationScore = request.conversationScore();
@@ -77,6 +88,11 @@ public class TrainingAnalysisMetrics {
         this.analysisExclusionReason = request.analysisExclusionReason();
         this.analyzerVersion = request.analyzerVersion();
         this.analysisPolicyVersion = request.analysisPolicyVersion();
+        this.metricQuality = request.metricQuality();
+        this.unansweredUserTurnCount = request.unansweredUserTurnCount();
+        this.unrecognizedUserTurnCount = request.unrecognizedUserTurnCount();
+        this.leadingSilenceDurationMs = request.leadingSilenceDurationMs();
+        this.trailingSilenceDurationMs = request.trailingSilenceDurationMs();
     }
 
     public static TrainingAnalysisMetrics from(
@@ -90,6 +106,11 @@ public class TrainingAnalysisMetrics {
 
     public boolean isPassed() {
         return analysisQualityStatus == AnalysisQualityStatus.PASS;
+    }
+
+    public boolean isMetricPassed(String metric) {
+        return metricQuality == null || metricQuality.isEmpty() ? isPassed()
+                : metricQuality.get(metric) == AnalysisQualityStatus.PASS;
     }
 
     public boolean hasObjectiveScores() {

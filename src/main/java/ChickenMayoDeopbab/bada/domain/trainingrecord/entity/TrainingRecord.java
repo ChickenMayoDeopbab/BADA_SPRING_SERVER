@@ -54,6 +54,7 @@ public class TrainingRecord {
     private String scenarioVersion;
 
     private String difficulty;
+    private Integer scriptLevel;
 
     @Embedded
     private TrainingAnalysisMetrics analysis;
@@ -87,8 +88,9 @@ public class TrainingRecord {
     private String recordingKey;
 
     private Short anxietyScore;
+    private LocalDateTime anxietyRecordedAt;
 
-    @Column(precision = 6, scale = 4)
+    @Column(precision = 7, scale = 4)
     private BigDecimal performanceScore;
 
     @Column(precision = 6, scale = 4)
@@ -124,6 +126,7 @@ public class TrainingRecord {
             String scenarioName,
             String scenarioVersion,
             String difficulty,
+            Integer scriptLevel,
             TrainingAnalysisMetrics analysis,
             SessionType sessionType,
             AiPersonality aiPersonality,
@@ -141,6 +144,7 @@ public class TrainingRecord {
         this.scenarioName = scenarioName;
         this.scenarioVersion = scenarioVersion;
         this.difficulty = difficulty;
+        this.scriptLevel = scriptLevel;
         this.analysis = analysis;
         this.scoreApplied = false;
         this.sessionType = sessionType;
@@ -156,6 +160,7 @@ public class TrainingRecord {
 
     public void recordAnxietyScore(Short score) {
         this.anxietyScore = score;
+        this.anxietyRecordedAt = LocalDateTime.now();
     }
 
 
@@ -185,6 +190,7 @@ public class TrainingRecord {
             LocalDateTime appliedAt
     ) {
         this.anxietyScore = anxietyScore;
+        if (this.anxietyRecordedAt == null) { this.anxietyRecordedAt = appliedAt; }
 
         this.performanceScore =
                 calculation.performanceScore();
@@ -216,6 +222,7 @@ public class TrainingRecord {
             String scoringVersion
     ) {
         this.anxietyScore = anxietyScore;
+        if (this.anxietyRecordedAt == null) { this.anxietyRecordedAt = LocalDateTime.now(); }
         this.scoreApplied = false;
         this.scoreAppliedAt = null;
         this.scoreExclusionReason = exclusionReason;

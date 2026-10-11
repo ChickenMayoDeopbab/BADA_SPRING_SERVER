@@ -26,6 +26,13 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
 
     Optional<TrainingRecord> findByRecordIdAndUser(Long recordId, Users user);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select record from TrainingRecord record where record.recordId = :recordId and record.user = :user")
+    Optional<TrainingRecord> findByRecordIdAndUserForUpdate(@Param("recordId") Long recordId, @Param("user") Users user);
+
+    @Query("select coalesce(max(record.scoreSequence), 0) from TrainingRecord record where record.user = :user")
+    long findMaximumScoreSequenceByUser(@Param("user") Users user);
+
     Page<TrainingRecord> findByUserOrderByStartedAtDesc(Users user, Pageable pageable);
 
     @Query(value = """
@@ -49,6 +56,9 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
     int countByUser(Users user);
 
     List<TrainingRecord> findAllByUser(Users user);
+
+    @Query("select record from TrainingRecord record where record.user.userId in :userIds and record.endedAt <= :asOf")
+    List<TrainingRecord> findForEvaluation(Collection<Long> userIds, LocalDateTime asOf);
 
     @Query("""
         select new ChickenMayoDeopbab.bada.domain.adminstatistics.model.AppliedTrainingStatisticsRow(
