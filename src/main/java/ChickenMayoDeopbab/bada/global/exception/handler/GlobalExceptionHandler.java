@@ -1,6 +1,7 @@
 package ChickenMayoDeopbab.bada.global.exception.handler;
 
 import ChickenMayoDeopbab.bada.global.common.ApiResponse;
+import ChickenMayoDeopbab.bada.domain.file.exception.FileStatusCode;
 import ChickenMayoDeopbab.bada.global.exception.ApplicationException;
 import ChickenMayoDeopbab.bada.global.exception.statuscode.CommonStatusCode;
 import ChickenMayoDeopbab.bada.global.exception.statuscode.StatusCode;
@@ -14,6 +15,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -75,6 +78,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<ApiResponse<Void>> handleMissingServletRequestParameterException(MissingServletRequestParameterException ex) {
         return CommonStatusCode.INVALID_ARGUMENT.toEntity("필수 파라미터가 누락되었습니다: " + ex.getParameterName());
+    }
+
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMissingServletRequestPart(MissingServletRequestPartException ex) {
+        return CommonStatusCode.INVALID_ARGUMENT.toEntity("필수 파일이 누락되었습니다: " + ex.getRequestPartName());
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException ex) {
+        return FileStatusCode.UPLOAD_TOO_LARGE.toEntity();
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)

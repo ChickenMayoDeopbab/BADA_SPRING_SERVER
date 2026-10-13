@@ -5,4 +5,5 @@ public enum FileType {
     SCENARIO_PROFILE,
     CALL_FILE,
     COMMUNITY_IMAGE,
+    RINGTONE,
 }
