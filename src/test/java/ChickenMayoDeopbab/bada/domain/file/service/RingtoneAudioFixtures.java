@@ -14,9 +14,13 @@ public final class RingtoneAudioFixtures {
     }
 
     public static byte[] wave() throws IOException {
-        byte[] pcm = new byte[160];
+        return wave(160);
+    }
+
+    public static byte[] wave(int pcmByteCount) throws IOException {
+        byte[] pcm = new byte[pcmByteCount];
         AudioFormat format = new AudioFormat(8000, 16, 1, true, false);
-        try (AudioInputStream audio = new AudioInputStream(new ByteArrayInputStream(pcm), format, 80);
+        try (AudioInputStream audio = new AudioInputStream(new ByteArrayInputStream(pcm), format, pcmByteCount / format.getFrameSize());
              ByteArrayOutputStream output = new ByteArrayOutputStream()) {
             AudioSystem.write(audio, AudioFileFormat.Type.WAVE, output);
             return output.toByteArray();

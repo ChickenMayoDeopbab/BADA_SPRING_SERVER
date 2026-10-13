@@ -172,6 +172,24 @@ class RingtonePersistenceTest {
     }
 
     @Test
+    void directStorageDeletionByAnotherAccountKeepsFileAndSelection() {
+        Fixture owner = fixture();
+        Fixture otherAccount = fixture();
+        authenticate(owner.user().getUsername());
+        transaction.executeWithoutResult(status -> service.updateSetting(new UpdateRingtoneSettingRequest(owner.file().getId())));
+
+        authenticate(otherAccount.user().getUsername());
+        assertThatThrownBy(() -> transaction.executeWithoutResult(status -> storage.deleteRingtone(owner.file())))
+                .isInstanceOf(ApplicationException.class).extracting("statusCode")
+                .isEqualTo(FileStatusCode.FILE_NOT_FOUND);
+
+        authenticate(owner.user().getUsername());
+        assertThat(files.findById(owner.file().getId())).isPresent();
+        assertThat(transaction.execute(status -> service.getSetting()).fileId()).isEqualTo(owner.file().getId());
+        verify(s3, never()).deleteObject(any(DeleteObjectRequest.class));
+    }
+
+    @Test
     void uploadRollbackRemovesS3ObjectAndDoesNotKeepMetadata() throws Exception {
         Fixture fixture = fixture();
         authenticate(fixture.user().getUsername());

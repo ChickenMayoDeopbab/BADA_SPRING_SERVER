@@ -11,6 +11,10 @@ import ChickenMayoDeopbab.bada.global.exception.ApplicationException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -178,6 +182,39 @@ class FileServiceRingtoneTest {
         doThrow(new IllegalStateException("delete failure")).when(files).flush();
 
         assertThatThrownBy(() -> service.deleteRingtone(ringtone(7L))).isInstanceOf(IllegalStateException.class);
+        verifyNoInteractions(s3);
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(longs = {99L})
+    void directRingtoneDeletionRejectsOtherOrMissingOwner(Long ownerId) {
+        assertThatThrownBy(() -> service.deleteRingtone(ringtone(ownerId)))
+                .isInstanceOf(ApplicationException.class).extracting("statusCode")
+                .isEqualTo(FileStatusCode.FILE_NOT_FOUND);
+        verifyNoInteractions(files, s3);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = FileType.class, names = "RINGTONE", mode = EnumSource.Mode.EXCLUDE)
+    void directRingtoneDeletionRejectsOtherFileTypesEvenForOwner(FileType type) {
+        File file = File.builder().title("owned-file").fileType(type).userId(7L).s3Key("other/example").build();
+
+        assertThatThrownBy(() -> service.deleteRingtone(file))
+                .isInstanceOf(ApplicationException.class).extracting("statusCode")
+                .isEqualTo(FileStatusCode.FILE_NOT_FOUND);
+        verifyNoInteractions(files, s3);
+    }
+
+    @Test
+    void genericDeletionCannotBypassRingtoneOwnershipCheck() {
+        when(files.findById(12L)).thenReturn(Optional.of(ringtone(99L)));
+
+        assertThatThrownBy(() -> service.delete(12L))
+                .isInstanceOf(ApplicationException.class).extracting("statusCode")
+                .isEqualTo(FileStatusCode.FILE_NOT_FOUND);
+        verify(files, never()).delete(any(File.class));
+        verify(files, never()).flush();
         verifyNoInteractions(s3);
     }
 
