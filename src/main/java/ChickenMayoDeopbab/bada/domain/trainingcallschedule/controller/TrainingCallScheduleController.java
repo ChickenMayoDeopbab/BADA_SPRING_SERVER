@@ -5,8 +5,6 @@ import ChickenMayoDeopbab.bada.domain.trainingcallschedule.dto.response.AcceptTr
 import ChickenMayoDeopbab.bada.domain.trainingcallschedule.dto.response.TrainingCallScheduleResponse;
 import ChickenMayoDeopbab.bada.domain.trainingcallschedule.service.TrainingCallScheduleService;
 import ChickenMayoDeopbab.bada.global.common.ApiResponse;
-import ChickenMayoDeopbab.bada.global.jwt.JwtProvider;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -23,7 +21,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class TrainingCallScheduleController {
 
     private final TrainingCallScheduleService trainingCallScheduleService;
-    private final JwtProvider jwtProvider;
 
     @PostMapping
     public ApiResponse<TrainingCallScheduleResponse> create(
@@ -49,13 +46,9 @@ public class TrainingCallScheduleController {
     }
 
     @PostMapping("/{scheduleId}/accept")
-    public ApiResponse<AcceptTrainingCallScheduleResponse> accept(
-            @PathVariable Long scheduleId,
-            HttpServletRequest httpRequest
-    ) {
-        String accessToken = jwtProvider.resolveToken(httpRequest);
+    public ApiResponse<AcceptTrainingCallScheduleResponse> accept(@PathVariable Long scheduleId) {
         return ApiResponse.ok(
-                trainingCallScheduleService.accept(scheduleId, accessToken),
+                trainingCallScheduleService.accept(scheduleId),
                 "AI 발신을 수신했습니다."
         );
     }

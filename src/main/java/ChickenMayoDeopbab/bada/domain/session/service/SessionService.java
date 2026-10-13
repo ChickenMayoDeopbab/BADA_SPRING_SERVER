@@ -48,12 +48,12 @@ public class SessionService {
     @Value("${app.ai.ws-base-url}")
     private String wsBaseUrl;
 
-    public CreateSessionResponse create(CreateSessionRequest request, String accessToken) {
+    public CreateSessionResponse create(CreateSessionRequest request) {
         Users user = getUserInfo();
-        return createForUser(user, request, accessToken);
+        return createForUser(user, request);
     }
 
-    public CreateSessionResponse createForUser(Users user, CreateSessionRequest request, String accessToken) {
+    public CreateSessionResponse createForUser(Users user, CreateSessionRequest request) {
         sensitiveInformationConsentPolicy.ensureAgreed(user);
         ScenarioContext scenario = scenarioPort.fetch(request.scenarioId(), request.type());
 
@@ -75,7 +75,8 @@ public class SessionService {
         String sessionId = UUID.randomUUID().toString();
         sessionRedisRepository.save(sessionId, context);
 
-        String wsUrl = wsBaseUrl + "/ws/voice/" + sessionId + "?token=" + accessToken;
+        // 토큰은 URL 에 싣지 않는다(접속 로그·DB 에 남는다). 클라는 연결 직후 첫 프레임 {type: auth, token} 으로 보낸다.
+        String wsUrl = wsBaseUrl + "/ws/voice/" + sessionId;
         return new CreateSessionResponse(sessionId, wsUrl);
     }
 

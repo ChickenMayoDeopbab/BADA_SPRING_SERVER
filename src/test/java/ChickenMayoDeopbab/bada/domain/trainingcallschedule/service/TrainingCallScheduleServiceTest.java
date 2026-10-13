@@ -140,9 +140,9 @@ class TrainingCallScheduleServiceTest {
         schedule.markRinging(LocalDateTime.now(), "session-id", "ws://voice");
         when(trainingCallScheduleRepository.findByScheduleIdAndUser(1L, user)).thenReturn(Optional.of(schedule));
 
-        AcceptTrainingCallScheduleResponse response = service.accept(1L, "access-token");
+        AcceptTrainingCallScheduleResponse response = service.accept(1L);
 
-        verify(sessionService, never()).createForUser(any(), any(), any());
+        verify(sessionService, never()).createForUser(any(), any());
         assertThat(schedule.getStatus()).isEqualTo(TrainingCallScheduleStatus.ACCEPTED);
         assertThat(response.status()).isEqualTo(TrainingCallScheduleStatus.ACCEPTED);
         assertThat(response.sessionId()).isEqualTo("session-id");
@@ -155,11 +155,11 @@ class TrainingCallScheduleServiceTest {
         TrainingCallSchedule schedule = schedule(user);
         when(trainingCallScheduleRepository.findByScheduleIdAndUser(1L, user)).thenReturn(Optional.of(schedule));
 
-        assertThatThrownBy(() -> service.accept(1L, "access-token"))
+        assertThatThrownBy(() -> service.accept(1L))
                 .isInstanceOf(ApplicationException.class)
                 .extracting(ex -> ((ApplicationException) ex).getStatusCode())
                 .isEqualTo(TrainingCallScheduleStatusCode.SCHEDULE_NOT_ACCEPTABLE);
-        verify(sessionService, never()).createForUser(any(), any(), any());
+        verify(sessionService, never()).createForUser(any(), any());
     }
 
     private Users givenAuthenticatedUser() {

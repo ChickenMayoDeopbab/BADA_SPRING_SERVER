@@ -10,7 +10,6 @@ import ChickenMayoDeopbab.bada.domain.trainingcallschedule.entity.TrainingCallSc
 import ChickenMayoDeopbab.bada.domain.trainingcallschedule.port.PushNotificationPort;
 import ChickenMayoDeopbab.bada.domain.trainingcallschedule.repository.TrainingCallScheduleRepository;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
-import ChickenMayoDeopbab.bada.global.jwt.JwtProvider;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -31,12 +30,10 @@ class TrainingCallScheduleTriggerServiceTest {
             mock(TrainingCallScheduleRepository.class);
     private final PushNotificationPort pushNotificationPort = mock(PushNotificationPort.class);
     private final SessionService sessionService = mock(SessionService.class);
-    private final JwtProvider jwtProvider = mock(JwtProvider.class);
     private final TrainingCallScheduleTriggerService service = new TrainingCallScheduleTriggerService(
             trainingCallScheduleRepository,
             pushNotificationPort,
-            sessionService,
-            jwtProvider
+            sessionService
     );
 
     @Test
@@ -49,8 +46,7 @@ class TrainingCallScheduleTriggerServiceTest {
                 TrainingCallScheduleStatus.SCHEDULED,
                 now
         )).thenReturn(List.of(schedule));
-        when(jwtProvider.createAccessToken(eq(7L), any())).thenReturn("scheduled-token");
-        when(sessionService.createForUser(eq(user), any(CreateSessionRequest.class), eq("scheduled-token")))
+        when(sessionService.createForUser(eq(user), any(CreateSessionRequest.class)))
                 .thenReturn(new CreateSessionResponse("session-id", "ws://voice"));
 
         int count = service.triggerDueSchedules(now);
@@ -62,7 +58,7 @@ class TrainingCallScheduleTriggerServiceTest {
         assertThat(schedule.getWsUrl()).isEqualTo("ws://voice");
 
         ArgumentCaptor<CreateSessionRequest> captor = ArgumentCaptor.forClass(CreateSessionRequest.class);
-        verify(sessionService).createForUser(eq(user), captor.capture(), eq("scheduled-token"));
+        verify(sessionService).createForUser(eq(user), captor.capture());
         CreateSessionRequest request = captor.getValue();
         assertThat(request.scenarioId()).isEqualTo(3L);
         assertThat(request.type()).isEqualTo(SessionType.SCENARIO);
