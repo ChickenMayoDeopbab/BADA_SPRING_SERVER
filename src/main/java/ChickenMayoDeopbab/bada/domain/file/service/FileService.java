@@ -11,11 +11,14 @@ import ChickenMayoDeopbab.bada.domain.user.exception.UsersStatusCode;
 import ChickenMayoDeopbab.bada.domain.user.repository.UsersRepository;
 import ChickenMayoDeopbab.bada.global.exception.ApplicationException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -33,6 +36,7 @@ import java.util.UUID;
 @Service
 @Transactional(rollbackFor = Exception.class)
 @RequiredArgsConstructor
+@Slf4j
 public class FileService {
 
     private final S3Client s3Client;
@@ -53,6 +57,9 @@ public class FileService {
         if (fileType == FileType.COMMUNITY_IMAGE && !isImage(multipartFile)) {
             throw ApplicationException.of(FileStatusCode.INVALID_IMAGE_TYPE);
         }
+        String contentType = fileType == FileType.RINGTONE
+                ? RingtoneFileValidator.validate(multipartFile)
+                : multipartFile.getContentType();
 
         Users user = getUserInfo();
         if (fileType == FileType.PROFILE) {
@@ -61,29 +68,87 @@ public class FileService {
         String originalFilename = multipartFile.getOriginalFilename();
         String s3Key = generateS3Key(fileType);
 
-        putObject(multipartFile, s3Key);
+        boolean rollbackCleanup = fileType == FileType.RINGTONE && registerRingtoneRollbackCleanup(s3Key);
+        try {
+            putObject(multipartFile, s3Key, contentType);
+            File file = fileRepository.save(File.builder()
+                    .title(originalFilename)
+                    .fileType(fileType)
+                    .s3Key(s3Key)
+                    .userId(user.getUserId())
+                    .build());
 
-        File file = fileRepository.save(File.builder()
-                .title(originalFilename)
-                .fileType(fileType)
-                .s3Key(s3Key)
-                .userId(user.getUserId())
-                .build());
-
-        String url = generatePresignedUrl(s3Key);
-        return FileUploadResponse.of(file, url);
+            String url = generatePresignedUrl(s3Key);
+            return FileUploadResponse.of(file, url);
+        } catch (RuntimeException exception) {
+            if (fileType == FileType.RINGTONE && !rollbackCleanup) {
+                cleanupRingtoneObject(s3Key);
+            }
+            throw exception;
+        }
     }
 
     @Transactional(readOnly = true)
     public String getUrl(String s3Key) {
         File file = fileRepository.findByS3Key(s3Key)
                 .orElseThrow(() -> new ApplicationException(FileStatusCode.FILE_NOT_FOUND));
+        if (file.getFileType() == FileType.RINGTONE && !file.getUserId().equals(getUserInfo().getUserId())) {
+            throw ApplicationException.of(FileStatusCode.FILE_NOT_FOUND);
+        }
         return generatePresignedUrl(file.getS3Key());
+    }
+
+    public void deleteRingtone(File file) {
+        fileRepository.delete(file);
+        fileRepository.flush();
+        scheduleRingtoneCleanup(file.getS3Key());
+    }
+
+    private void scheduleRingtoneCleanup(String s3Key) {
+        // DB 롤백 시 재생 가능한 파일이 먼저 사라지지 않도록 커밋 후 S3를 정리한다.
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    cleanupRingtoneObject(s3Key);
+                }
+            });
+        } else {
+            cleanupRingtoneObject(s3Key);
+        }
+    }
+
+    private boolean registerRingtoneRollbackCleanup(String s3Key) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            return false;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status == STATUS_ROLLED_BACK) {
+                    cleanupRingtoneObject(s3Key);
+                }
+            }
+        });
+        return true;
+    }
+
+    private void cleanupRingtoneObject(String s3Key) {
+        try {
+            deleteByKey(s3Key);
+        } catch (RuntimeException exception) {
+            // S3/DB는 원자적으로 커밋할 수 없다. 실패한 key는 운영자가 재정리할 수 있도록 남긴다.
+            log.error("벨소리 S3 파일 정리 실패: key={}", s3Key, exception);
+        }
     }
 
     public void delete(Long fileId) {
         File file = fileRepository.findById(fileId)
                 .orElseThrow(() -> ApplicationException.of(FileStatusCode.FILE_NOT_FOUND));
+        if (file.getFileType() == FileType.RINGTONE) {
+            deleteRingtone(file);
+            return;
+        }
         s3Client.deleteObject(DeleteObjectRequest.builder()
                 .bucket(bucket)
                 .key(file.getS3Key())
@@ -118,7 +183,11 @@ public class FileService {
 
     private void deleteFiles(List<File> files) {
         for (File file : files) {
-            deleteByKey(file.getS3Key());
+            if (file.getFileType() == FileType.RINGTONE) {
+                scheduleRingtoneCleanup(file.getS3Key());
+            } else {
+                deleteByKey(file.getS3Key());
+            }
         }
         fileRepository.deleteAll(files);
     }
@@ -145,11 +214,11 @@ public class FileService {
         return s3Client.getObjectAsBytes(request).asByteArray();
     }
 
-    private void putObject(MultipartFile multipartFile, String s3Key) {
+    private void putObject(MultipartFile multipartFile, String s3Key, String contentType) {
         PutObjectRequest request = PutObjectRequest.builder()
                 .bucket(bucket)
                 .key(s3Key)
-                .contentType(multipartFile.getContentType())
+                .contentType(contentType)
                 .contentLength(multipartFile.getSize())
                 .build();
 
