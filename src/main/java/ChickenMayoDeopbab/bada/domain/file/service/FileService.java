@@ -104,6 +104,10 @@ public class FileService {
     }
 
     public void deleteRingtone(File file) {
+        // 호출자가 검증을 생략해도 타인 소유 파일이나 다른 파일 유형은 삭제하지 않는다.
+        if (file.getFileType() != FileType.RINGTONE || !getUserInfo().getUserId().equals(file.getUserId())) {
+            throw ApplicationException.of(FileStatusCode.FILE_NOT_FOUND);
+        }
         fileRepository.delete(file);
         fileRepository.flush();
         scheduleRingtoneCleanup(file.getS3Key());
