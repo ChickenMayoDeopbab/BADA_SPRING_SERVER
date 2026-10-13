@@ -49,10 +49,15 @@ public class FileService {
     private String bucket;
 
     private static final Duration PRESIGNED_URL_EXPIRATION = Duration.ofMinutes(10);
+    private static final long MAX_NON_RINGTONE_FILE_SIZE = 1024L * 1024;
 
     public FileUploadResponse upload(MultipartFile multipartFile, FileType fileType) {
         if (multipartFile == null || multipartFile.isEmpty()) {
             throw ApplicationException.of(FileStatusCode.EMPTY_FILE);
+        }
+        // 벨소리 전송 상한을 높여도 기존 파일 유형의 1MB 정책은 유지한다.
+        if (fileType != FileType.RINGTONE && multipartFile.getSize() > MAX_NON_RINGTONE_FILE_SIZE) {
+            throw ApplicationException.of(FileStatusCode.UPLOAD_TOO_LARGE);
         }
         if (fileType == FileType.COMMUNITY_IMAGE && !isImage(multipartFile)) {
             throw ApplicationException.of(FileStatusCode.INVALID_IMAGE_TYPE);
