@@ -83,7 +83,7 @@ public class TrainingCallScheduleService {
     }
 
     @Transactional
-    public AcceptTrainingCallScheduleResponse accept(Long scheduleId, String accessToken) {
+    public AcceptTrainingCallScheduleResponse accept(Long scheduleId) {
         Users user = getUserInfo();
         TrainingCallSchedule schedule = trainingCallScheduleRepository.findByScheduleIdAndUser(scheduleId, user)
                 .orElseThrow(() -> ApplicationException.of(TrainingCallScheduleStatusCode.SCHEDULE_NOT_FOUND));
@@ -92,17 +92,13 @@ public class TrainingCallScheduleService {
             throw ApplicationException.of(TrainingCallScheduleStatusCode.SCHEDULE_NOT_ACCEPTABLE);
         }
 
-        CreateSessionResponse session = resolveRingingSession(schedule, accessToken, user);
+        CreateSessionResponse session = resolveRingingSession(schedule, user);
 
         schedule.accept(session.sessionId(), session.wsUrl(), LocalDateTime.now());
         return AcceptTrainingCallScheduleResponse.of(schedule, session);
     }
 
-    private CreateSessionResponse resolveRingingSession(
-            TrainingCallSchedule schedule,
-            String accessToken,
-            Users user
-    ) {
+    private CreateSessionResponse resolveRingingSession(TrainingCallSchedule schedule, Users user) {
         if (schedule.getSessionId() != null && schedule.getWsUrl() != null) {
             return new CreateSessionResponse(schedule.getSessionId(), schedule.getWsUrl());
         }
@@ -114,8 +110,7 @@ public class TrainingCallScheduleService {
                         schedule.getAiPersonality(),
                         null,
                         schedule.getMaxDurationSeconds()
-                ),
-                accessToken
+                )
         );
     }
 

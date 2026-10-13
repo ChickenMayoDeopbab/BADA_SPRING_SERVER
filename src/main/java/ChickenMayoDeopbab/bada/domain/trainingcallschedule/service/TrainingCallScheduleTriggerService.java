@@ -7,7 +7,6 @@ import ChickenMayoDeopbab.bada.domain.trainingcallschedule.entity.TrainingCallSc
 import ChickenMayoDeopbab.bada.domain.trainingcallschedule.entity.TrainingCallScheduleStatus;
 import ChickenMayoDeopbab.bada.domain.trainingcallschedule.port.PushNotificationPort;
 import ChickenMayoDeopbab.bada.domain.trainingcallschedule.repository.TrainingCallScheduleRepository;
-import ChickenMayoDeopbab.bada.global.jwt.JwtProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -25,7 +24,6 @@ public class TrainingCallScheduleTriggerService {
     private final TrainingCallScheduleRepository trainingCallScheduleRepository;
     private final PushNotificationPort pushNotificationPort;
     private final SessionService sessionService;
-    private final JwtProvider jwtProvider;
 
     @Scheduled(fixedDelayString = "${app.training-call-schedule.trigger-fixed-delay-ms:30000}")
     @Transactional
@@ -53,10 +51,6 @@ public class TrainingCallScheduleTriggerService {
     }
 
     private CreateSessionResponse createVoiceSession(TrainingCallSchedule schedule) {
-        String accessToken = jwtProvider.createAccessToken(
-                schedule.getUser().getUserId(),
-                schedule.getUser().getRole()
-        );
         return sessionService.createForUser(
                 schedule.getUser(),
                 new CreateSessionRequest(
@@ -65,8 +59,7 @@ public class TrainingCallScheduleTriggerService {
                         schedule.getAiPersonality(),
                         null,
                         schedule.getMaxDurationSeconds()
-                ),
-                accessToken
+                )
         );
     }
 }

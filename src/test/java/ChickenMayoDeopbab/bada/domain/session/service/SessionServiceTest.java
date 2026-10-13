@@ -1,6 +1,7 @@
 package ChickenMayoDeopbab.bada.domain.session.service;
 
 import ChickenMayoDeopbab.bada.domain.session.dto.request.CreateSessionRequest;
+import ChickenMayoDeopbab.bada.domain.session.dto.response.CreateSessionResponse;
 import ChickenMayoDeopbab.bada.domain.legalconsent.service.SensitiveInformationConsentPolicy;
 import ChickenMayoDeopbab.bada.domain.session.enums.AiPersonality;
 import ChickenMayoDeopbab.bada.domain.session.enums.SessionType;
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Optional;
 
@@ -72,9 +74,10 @@ class SessionServiceTest {
                 sensitiveInformationConsentPolicy
         );
 
-        service.create(
-                new CreateSessionRequest(3L, SessionType.SCENARIO, AiPersonality.NORMAL, null, 180),
-                "access-token"
+        ReflectionTestUtils.setField(service, "wsBaseUrl", "wss://ai.example");
+
+        CreateSessionResponse response = service.create(
+                new CreateSessionRequest(3L, SessionType.SCENARIO, AiPersonality.NORMAL, null, 180)
         );
 
         ArgumentCaptor<SessionContext> captor = ArgumentCaptor.forClass(SessionContext.class);
@@ -82,5 +85,7 @@ class SessionServiceTest {
         verify(sensitiveInformationConsentPolicy).ensureAgreed(user);
         assertThat(captor.getValue().scriptLevel()).isEqualTo(2);
         assertThat(captor.getValue().userId()).isEqualTo(7L);
+        // 토큰은 URL 에 싣지 않는다(접속 로그·DB 에 남는다) — 클라는 첫 프레임으로 보낸다
+        assertThat(response.wsUrl()).isEqualTo("wss://ai.example/ws/voice/" + response.sessionId());
     }
 }
