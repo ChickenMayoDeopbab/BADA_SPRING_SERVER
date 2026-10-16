@@ -12,6 +12,7 @@ import ChickenMayoDeopbab.bada.domain.session.enums.SessionType;
 import ChickenMayoDeopbab.bada.domain.session.model.GoodSegment;
 import ChickenMayoDeopbab.bada.domain.session.model.TranscriptTurn;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.*;
+import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.request.TrainingRecordSearchQuery;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingAnalysisMetrics;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingRecord;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.exception.TrainingRecordStatusCode;
@@ -81,9 +82,20 @@ public class TrainingRecordService {
             Set.of(EndReason.ERROR, EndReason.NO_AUDIO);
 
     public Page<TrainingRecordResponse> getTrainingRecords(Pageable pageable) {
+        return getTrainingRecords(pageable, null);
+    }
+
+    public Page<TrainingRecordResponse> getTrainingRecords(Pageable pageable, TrainingRecordSearchQuery query) {
         Users user = getUserInfo();
-        Page<TrainingRecord> records =
-                trainingRecordRepository.findByUserOrderByStartedAtDesc(user, pageable);
+        Page<TrainingRecord> records;
+        if (query == null || !query.hasFilters()) {
+            records = trainingRecordRepository.findByUserOrderByStartedAtDesc(user, pageable);
+        } else {
+            var filter = query.validatedFilter();
+            records = trainingRecordRepository.findFilteredTrainingRecords(user,
+                    query.from() == null ? null : query.from().atStartOfDay(),
+                    query.to() == null ? null : query.to().plusDays(1).atStartOfDay(), filter, pageable);
+        }
         Map<Long, ScenarioMediaUrls> mediaUrlsByScenarioId =
                 resolveScenarioMediaUrls(records.getContent());
 
