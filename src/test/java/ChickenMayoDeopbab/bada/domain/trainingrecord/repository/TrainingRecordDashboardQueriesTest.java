@@ -17,6 +17,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -70,6 +71,24 @@ class TrainingRecordDashboardQueriesTest {
         var first = records.findFirstScenarioTrainings(owner, List.of(12L), Set.of(EndReason.END_CALL));
         assertThat(first).hasSize(1);
         assertThat(first.getFirst().startedAt()).isEqualTo(start.minusSeconds(1));
+    }
+
+    @Test
+    void paginates_matching_records_without_leaking_other_users_or_conditions() {
+        Users owner = user("page-owner"), other = user("page-other");
+        var start = LocalDateTime.of(2026, 10, 1, 0, 0);
+        var first = record(owner, start, "HARD", null);
+        var second = record(owner, start, "HARD", null);
+        record(owner, start, "EASY", null);
+        record(other, start, "HARD", null);
+        entityManager.flush();
+        entityManager.clear();
+        var filter = new TrainingRecordFilter(null, 12L, "SCENARIO_V1", "HARD", AiPersonality.KIND, 3);
+        var page = records.findFilteredTrainingRecords(owner, start, start.plusDays(1), filter, PageRequest.of(0, 1));
+        assertThat(page.getTotalElements()).isEqualTo(2);
+        assertThat(page.getContent()).extracting(TrainingRecord::getRecordId).containsExactly(second.getRecordId());
+        assertThat(records.findFilteredTrainingRecords(owner, start, start.plusDays(1), filter, PageRequest.of(1, 1)).getContent())
+                .extracting(TrainingRecord::getRecordId).containsExactly(first.getRecordId());
     }
 
     @Test

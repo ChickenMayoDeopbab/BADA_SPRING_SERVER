@@ -9,6 +9,7 @@ import ChickenMayoDeopbab.bada.domain.session.enums.SessionType;
 import ChickenMayoDeopbab.bada.domain.session.model.GoodSegment;
 import ChickenMayoDeopbab.bada.domain.session.model.TranscriptTurn;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.FeedbackResponse;
+import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.request.TrainingRecordSearchQuery;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.TrainingRecordResponse;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingRecord;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.exception.TrainingRecordStatusCode;
@@ -29,6 +30,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
@@ -38,6 +40,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -73,6 +76,30 @@ class TrainingRecordServiceTest {
     );
 
     private final Users user = mock(Users.class);
+
+    @Test
+    void forwards_search_conditions_with_an_exclusive_end_date() {
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken("tester", null));
+        when(usersRepository.findByUsername("tester")).thenReturn(Optional.of(user));
+        var pageable = PageRequest.of(0, 20);
+        var query = new TrainingRecordSearchQuery(LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 2),
+                SessionType.SCENARIO, 12L, "SCENARIO_V1", "HARD", null, 3);
+        when(trainingRecordRepository.findFilteredTrainingRecords(eq(user), any(), any(), any(), eq(pageable)))
+                .thenReturn(Page.empty(pageable));
+        assertThat(service.getTrainingRecords(pageable, query)).isEmpty();
+        verify(trainingRecordRepository).findFilteredTrainingRecords(user,
+                LocalDateTime.of(2026, 10, 1, 0, 0), LocalDateTime.of(2026, 10, 3, 0, 0), query.validatedFilter(), pageable);
+        verify(trainingRecordRepository, never()).findByUserOrderByStartedAtDesc(any(), any());
+    }
+
+    @Test
+    void rejects_unpaired_record_search_dates_before_querying_records() {
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken("tester", null));
+        when(usersRepository.findByUsername("tester")).thenReturn(Optional.of(user));
+        var query = new TrainingRecordSearchQuery(LocalDate.of(2026, 10, 1), null, null, null, null, null, null, null);
+        assertThatThrownBy(() -> service.getTrainingRecords(PageRequest.of(0, 20), query)).isInstanceOf(ApplicationException.class);
+        verifyNoInteractions(trainingRecordRepository);
+    }
 
     @AfterEach
     void clearSecurityContext() {
