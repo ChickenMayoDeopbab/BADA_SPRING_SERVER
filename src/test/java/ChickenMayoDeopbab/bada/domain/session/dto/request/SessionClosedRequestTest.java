@@ -27,6 +27,26 @@ class SessionClosedRequestTest {
         SessionClosedRequest request = objectMapper.readValue(json, SessionClosedRequest.class);
 
         assertThat(request.reason()).isEqualTo(EndReason.NO_AUDIO);
+        assertThat(request.speechMetrics()).isNull();
+    }
+
+    @Test
+    void preservesSnakeCaseSpeechSummaryThroughStorageSerialization() throws Exception {
+        String json = """
+                {"reason":"END_CALL", "speech_metrics":{
+                  "schema_version":1, "measurement_version":"FEEDBACK_METRICS_V1", "policy_version":"FEEDBACK_POLICY_V1",
+                  "metrics":{"tremor_turn_rate":{"status":"MEASURED","eligible_turn_count":5,"affected_turn_count":0},
+                             "response_delay_ms":{"status":"UNAVAILABLE","eligible_turn_count":0}}
+                }}
+                """;
+        var request = objectMapper.readValue(json, SessionClosedRequest.class);
+        var summary = request.speechMetrics();
+        assertThat(summary.supportsCurrentPolicy()).isTrue();
+        assertThat(summary.metrics().get("tremor_turn_rate").hasValidRate()).isTrue();
+        assertThat(summary.metrics().get("response_delay_ms").hasValidDelay()).isFalse();
+        var stored = objectMapper.readTree(objectMapper.writeValueAsString(summary));
+        assertThat(stored.get("schema_version").intValue()).isEqualTo(1);
+        assertThat(stored.get("metrics").get("tremor_turn_rate").get("affected_turn_count").intValue()).isZero();
     }
 
     @Test
