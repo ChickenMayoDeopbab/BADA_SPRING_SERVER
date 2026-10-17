@@ -22,6 +22,8 @@ import ChickenMayoDeopbab.bada.global.exception.ApplicationException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.InOrder;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -106,6 +108,37 @@ class TrainingRecordServiceTest {
         var query = new TrainingRecordSearchQuery(LocalDate.of(2026, 10, 1), null, null, null, null, null, null, null);
         assertThatThrownBy(() -> service.getTrainingRecords(PageRequest.of(0, 20), query)).isInstanceOf(ApplicationException.class);
         verifyNoInteractions(trainingRecordRepository);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "2026-10-17T14:59:59Z, Asia/Seoul, false",
+            "2026-10-17T15:00:00Z, Asia/Seoul, true",
+            "2026-10-17T15:00:00Z, UTC, false"
+    })
+    void validates_search_dates_at_midnight_using_the_injected_clock(String instant, String zone, boolean accepted) {
+        Clock clock = Clock.fixed(Instant.parse(instant), ZoneId.of(zone));
+        var serviceWithClock = new TrainingRecordService(trainingRecordRepository, usersRepository, new ObjectMapper(),
+                fileService, trainingDataCleanupPort, callAnxietyStateRepository, new CallAnxietyScoreCalculator(),
+                sensitiveInformationConsentPolicy, recordingPlaybackService,
+                mock(org.springframework.context.ApplicationEventPublisher.class), clock);
+        loginForList();
+        var pageable = PageRequest.of(0, 20);
+        var date = LocalDate.of(2026, 10, 18);
+        var query = new TrainingRecordSearchQuery(date, date, null, null, null, null, null, null);
+
+        if (accepted) {
+            when(trainingRecordRepository.findFilteredTrainingRecords(eq(user), any(), any(), any(), eq(pageable)))
+                    .thenReturn(Page.empty(pageable));
+            assertThat(serviceWithClock.getTrainingRecords(pageable, query)).isEmpty();
+            verify(trainingRecordRepository).findFilteredTrainingRecords(eq(user), eq(date.atStartOfDay()),
+                    eq(date.plusDays(1).atStartOfDay()), any(), eq(pageable));
+            verify(trainingRecordRepository, never()).findByUserOrderByStartedAtDesc(any(), any());
+        } else {
+            assertThatThrownBy(() -> serviceWithClock.getTrainingRecords(pageable, query))
+                    .isInstanceOf(ApplicationException.class);
+            verifyNoInteractions(trainingRecordRepository);
+        }
     }
 
     @AfterEach
