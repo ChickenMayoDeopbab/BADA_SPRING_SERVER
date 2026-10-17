@@ -5,6 +5,7 @@ import ChickenMayoDeopbab.bada.domain.session.model.GoodSegment;
 import ChickenMayoDeopbab.bada.domain.session.model.SessionContext;
 import ChickenMayoDeopbab.bada.domain.session.model.TranscriptTurn;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.request.TrainingAnalysisRequest;
+import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingSpeechMetrics;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -26,7 +27,8 @@ public class LoggingSessionRecordAdapter implements SessionRecordPort {
             Integer shakeCount,
             List<GoodSegment> goodSegments,
             String recordingKey,
-            TrainingAnalysisRequest analysis
+            TrainingAnalysisRequest analysis,
+            TrainingSpeechMetrics speechMetrics
     ) {
         Long userId = context != null ? context.userId() : null;
         int turns = transcript != null ? transcript.size() : 0;

@@ -1,6 +1,8 @@
 package ChickenMayoDeopbab.bada.domain.trainingrecord.controller;
 
 import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.request.RecordAnxietyScoreRequest;
+import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.request.TrainingRecordSearchQuery;
+import org.springdoc.core.annotations.ParameterObject;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.AnxietyScoreResponse;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.FeedbackResponse;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.TrainingRecordDetailResponse;
@@ -37,10 +39,11 @@ public class TrainingRecordController {
 
     @GetMapping
     public ApiResponse<Page<TrainingRecordResponse>> getTrainingRecords(
+            @ParameterObject @ModelAttribute TrainingRecordSearchQuery query,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        return ApiResponse.ok(trainingRecordService.getTrainingRecords(PageRequest.of(page, size)));
+        return ApiResponse.ok(trainingRecordService.getTrainingRecords(PageRequest.of(page, size), query));
     }
 
     @GetMapping("/{recordId}")

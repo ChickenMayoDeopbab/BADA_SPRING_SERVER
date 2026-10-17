@@ -12,6 +12,7 @@ import ChickenMayoDeopbab.bada.domain.session.enums.SessionType;
 import ChickenMayoDeopbab.bada.domain.session.model.GoodSegment;
 import ChickenMayoDeopbab.bada.domain.session.model.TranscriptTurn;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.*;
+import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.request.TrainingRecordSearchQuery;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingAnalysisMetrics;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingRecord;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.exception.TrainingRecordStatusCode;
@@ -36,6 +37,7 @@ import ChickenMayoDeopbab.bada.domain.trainingrecord.model.TrainingDataRemoved;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Comparator;
@@ -61,6 +63,7 @@ public class TrainingRecordService {
     private final SensitiveInformationConsentPolicy sensitiveInformationConsentPolicy;
     private final RecordingPlaybackService recordingPlaybackService;
     private final ApplicationEventPublisher events;
+    private final Clock dashboardClock;
     private static final String OTHER_CATEGORY = "other";
     private static final Map<String, String> CATEGORY_ICON_KEYS = Map.of(
             "work", "scenario_profile/9c59b8ee-46d0-4207-bed0-ab7136104fef",
@@ -81,9 +84,20 @@ public class TrainingRecordService {
             Set.of(EndReason.ERROR, EndReason.NO_AUDIO);
 
     public Page<TrainingRecordResponse> getTrainingRecords(Pageable pageable) {
+        return getTrainingRecords(pageable, null);
+    }
+
+    public Page<TrainingRecordResponse> getTrainingRecords(Pageable pageable, TrainingRecordSearchQuery query) {
         Users user = getUserInfo();
-        Page<TrainingRecord> records =
-                trainingRecordRepository.findByUserOrderByStartedAtDesc(user, pageable);
+        Page<TrainingRecord> records;
+        if (query == null || !query.hasFilters()) {
+            records = trainingRecordRepository.findByUserOrderByStartedAtDesc(user, pageable);
+        } else {
+            var filter = query.validatedFilter(dashboardClock);
+            records = trainingRecordRepository.findFilteredTrainingRecords(user,
+                    query.from() == null ? null : query.from().atStartOfDay(),
+                    query.to() == null ? null : query.to().plusDays(1).atStartOfDay(), filter, pageable);
+        }
         Map<Long, ScenarioMediaUrls> mediaUrlsByScenarioId =
                 resolveScenarioMediaUrls(records.getContent());
 

@@ -13,6 +13,7 @@ import ChickenMayoDeopbab.bada.domain.session.port.SessionRecordPort;
 import ChickenMayoDeopbab.bada.domain.session.repository.SessionRedisRepository;
 import ChickenMayoDeopbab.bada.domain.legalconsent.service.SensitiveInformationConsentPolicy;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.request.TrainingAnalysisRequest;
+import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingSpeechMetrics;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.repository.TrainingRecordRepository;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
 import ChickenMayoDeopbab.bada.domain.user.exception.UsersStatusCode;
@@ -89,14 +90,15 @@ public class SessionService {
             Integer shakeCount,
             List<GoodSegment> goodSegments,
             String recordingKey,
-            TrainingAnalysisRequest analysis
+            TrainingAnalysisRequest analysis,
+            TrainingSpeechMetrics speechMetrics
     ) {
         SessionContext context = sessionRedisRepository.find(sessionId);
         if (context == null) {
             log.warn("종료 콜백 - 세션 없음(만료/미존재) sessionId={} reason={}", sessionId, reason);
             return;
         }
-        sessionRecordPort.record(sessionId, context, reason, transcript, silenceTotal, shakeCount, goodSegments, recordingKey, analysis);
+        sessionRecordPort.record(sessionId, context, reason, transcript, silenceTotal, shakeCount, goodSegments, recordingKey, analysis, speechMetrics);
         sessionRedisRepository.delete(sessionId);
     }
 

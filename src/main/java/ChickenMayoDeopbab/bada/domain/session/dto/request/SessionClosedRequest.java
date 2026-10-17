@@ -4,6 +4,7 @@ import ChickenMayoDeopbab.bada.domain.session.enums.EndReason;
 import ChickenMayoDeopbab.bada.domain.session.model.GoodSegment;
 import ChickenMayoDeopbab.bada.domain.session.model.TranscriptTurn;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.request.TrainingAnalysisRequest;
+import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingSpeechMetrics;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
@@ -25,6 +26,9 @@ public record SessionClosedRequest(
         @JsonProperty("recording_key")
         String recordingKey,
 
-        TrainingAnalysisRequest analysis
+        TrainingAnalysisRequest analysis,
+
+        @JsonProperty("speech_metrics")
+        TrainingSpeechMetrics speechMetrics
 ) {
 }

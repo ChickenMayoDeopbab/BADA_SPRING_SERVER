@@ -10,6 +10,8 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -58,6 +60,10 @@ public class TrainingRecord {
 
     @Embedded
     private TrainingAnalysisMetrics analysis;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "speech_metrics", columnDefinition = "jsonb")
+    private TrainingSpeechMetrics speechMetrics;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -128,6 +134,7 @@ public class TrainingRecord {
             String difficulty,
             Integer scriptLevel,
             TrainingAnalysisMetrics analysis,
+            TrainingSpeechMetrics speechMetrics,
             SessionType sessionType,
             AiPersonality aiPersonality,
             EndReason endReason,
@@ -146,6 +153,7 @@ public class TrainingRecord {
         this.difficulty = difficulty;
         this.scriptLevel = scriptLevel;
         this.analysis = analysis;
+        this.speechMetrics = speechMetrics;
         this.scoreApplied = false;
         this.sessionType = sessionType;
         this.aiPersonality = aiPersonality;

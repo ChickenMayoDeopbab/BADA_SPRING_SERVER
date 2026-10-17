@@ -44,7 +44,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import javax.sql.DataSource;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -116,7 +119,8 @@ class EvaluationPersistenceTest {
         });
         TrainingRecordService service = new TrainingRecordService(records, users, new ObjectMapper(), mock(FileService.class),
                 mock(TrainingDataCleanupPort.class), states, new CallAnxietyScoreCalculator(), mock(SensitiveInformationConsentPolicy.class),
-                mock(RecordingPlaybackService.class), mock(ApplicationEventPublisher.class));
+                mock(RecordingPlaybackService.class), mock(ApplicationEventPublisher.class),
+                Clock.fixed(Instant.parse("2026-10-17T00:00:00Z"), ZoneId.of("Asia/Seoul")));
         CountDownLatch ready = new CountDownLatch(2);
         try (ExecutorService executor = Executors.newFixedThreadPool(2)) {
             List<Future<?>> futures = new ArrayList<>();

@@ -9,6 +9,7 @@ import ChickenMayoDeopbab.bada.domain.session.enums.SessionType;
 import ChickenMayoDeopbab.bada.domain.session.model.GoodSegment;
 import ChickenMayoDeopbab.bada.domain.session.model.TranscriptTurn;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.FeedbackResponse;
+import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.request.TrainingRecordSearchQuery;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.TrainingRecordResponse;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingRecord;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.exception.TrainingRecordStatusCode;
@@ -21,6 +22,8 @@ import ChickenMayoDeopbab.bada.global.exception.ApplicationException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.InOrder;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -28,8 +31,12 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -38,6 +45,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -48,6 +56,9 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class TrainingRecordServiceTest {
+
+    private static final Clock FIXED_CLOCK =
+            Clock.fixed(Instant.parse("2026-10-17T00:00:00Z"), ZoneId.of("Asia/Seoul"));
 
     private final TrainingRecordRepository trainingRecordRepository = mock(TrainingRecordRepository.class);
     private final UsersRepository usersRepository = mock(UsersRepository.class);
@@ -69,10 +80,66 @@ class TrainingRecordServiceTest {
             new CallAnxietyScoreCalculator(),
             sensitiveInformationConsentPolicy,
             recordingPlaybackService,
-            mock(org.springframework.context.ApplicationEventPublisher.class)
+            mock(org.springframework.context.ApplicationEventPublisher.class),
+            FIXED_CLOCK
     );
 
     private final Users user = mock(Users.class);
+
+    @Test
+    void forwards_search_conditions_with_an_exclusive_end_date() {
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken("tester", null));
+        when(usersRepository.findByUsername("tester")).thenReturn(Optional.of(user));
+        var pageable = PageRequest.of(0, 20);
+        var query = new TrainingRecordSearchQuery(LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 2),
+                SessionType.SCENARIO, 12L, "SCENARIO_V1", "HARD", null, 3);
+        when(trainingRecordRepository.findFilteredTrainingRecords(eq(user), any(), any(), any(), eq(pageable)))
+                .thenReturn(Page.empty(pageable));
+        assertThat(service.getTrainingRecords(pageable, query)).isEmpty();
+        verify(trainingRecordRepository).findFilteredTrainingRecords(user,
+                LocalDateTime.of(2026, 10, 1, 0, 0), LocalDateTime.of(2026, 10, 3, 0, 0), query.validatedFilter(FIXED_CLOCK), pageable);
+        verify(trainingRecordRepository, never()).findByUserOrderByStartedAtDesc(any(), any());
+    }
+
+    @Test
+    void rejects_unpaired_record_search_dates_before_querying_records() {
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken("tester", null));
+        when(usersRepository.findByUsername("tester")).thenReturn(Optional.of(user));
+        var query = new TrainingRecordSearchQuery(LocalDate.of(2026, 10, 1), null, null, null, null, null, null, null);
+        assertThatThrownBy(() -> service.getTrainingRecords(PageRequest.of(0, 20), query)).isInstanceOf(ApplicationException.class);
+        verifyNoInteractions(trainingRecordRepository);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "2026-10-17T14:59:59Z, Asia/Seoul, false",
+            "2026-10-17T15:00:00Z, Asia/Seoul, true",
+            "2026-10-17T15:00:00Z, UTC, false"
+    })
+    void validates_search_dates_at_midnight_using_the_injected_clock(String instant, String zone, boolean accepted) {
+        Clock clock = Clock.fixed(Instant.parse(instant), ZoneId.of(zone));
+        var serviceWithClock = new TrainingRecordService(trainingRecordRepository, usersRepository, new ObjectMapper(),
+                fileService, trainingDataCleanupPort, callAnxietyStateRepository, new CallAnxietyScoreCalculator(),
+                sensitiveInformationConsentPolicy, recordingPlaybackService,
+                mock(org.springframework.context.ApplicationEventPublisher.class), clock);
+        loginForList();
+        var pageable = PageRequest.of(0, 20);
+        var date = LocalDate.of(2026, 10, 18);
+        var query = new TrainingRecordSearchQuery(date, date, null, null, null, null, null, null);
+
+        if (accepted) {
+            when(trainingRecordRepository.findFilteredTrainingRecords(eq(user), any(), any(), any(), eq(pageable)))
+                    .thenReturn(Page.empty(pageable));
+            assertThat(serviceWithClock.getTrainingRecords(pageable, query)).isEmpty();
+            verify(trainingRecordRepository).findFilteredTrainingRecords(eq(user), eq(date.atStartOfDay()),
+                    eq(date.plusDays(1).atStartOfDay()), any(), eq(pageable));
+            verify(trainingRecordRepository, never()).findByUserOrderByStartedAtDesc(any(), any());
+        } else {
+            assertThatThrownBy(() -> serviceWithClock.getTrainingRecords(pageable, query))
+                    .isInstanceOf(ApplicationException.class);
+            verifyNoInteractions(trainingRecordRepository);
+        }
+    }
 
     @AfterEach
     void clearSecurityContext() {
