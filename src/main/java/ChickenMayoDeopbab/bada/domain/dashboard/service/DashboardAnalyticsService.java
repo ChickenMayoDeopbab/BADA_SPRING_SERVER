@@ -52,7 +52,7 @@ public class DashboardAnalyticsService {
                 aggregator.hintSettings(rows), metrics,
                 aggregator.series(rows, query.period(), query.interval(), LocalDate.now(clock)),
                 aggregator.activity(rows, query.period()),
-                new Coverage(training.size(), metrics.get("selfReportedAnxiety").sampleCount(), counts));
+                new Coverage(training.size(), metrics.get(DashboardAggregator.Metric.ANXIETY.key).sampleCount(), counts));
     }
 
     public Comparison comparison(DashboardQuery request) {
