@@ -9,6 +9,8 @@ import ChickenMayoDeopbab.bada.domain.session.enums.SessionType;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingSpeechMetrics;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.repository.projection.TrainingDashboardRow;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -49,18 +51,55 @@ class DashboardAggregatorTest {
         var matched = aggregator.compare(before, after).metrics().getFirst().matched();
         assertThat(matched.status()).isEqualTo(Status.NOT_COMPARABLE);
         assertThat(matched.delta()).isNull();
-        assertThat(matched.current().exclusionReasons()).containsEntry("UNKNOWN_CONDITION", 1L)
-                .containsEntry("NO_SHARED_CONDITION", 2L);
+        assertThat(matched.baseline().exclusionReasons()).isEqualTo(Map.of("NO_SHARED_CONDITION", 3L));
+        assertThat(matched.current().exclusionReasons()).isEqualTo(Map.of("UNKNOWN_CONDITION", 1L, "NO_SHARED_CONDITION", 2L));
     }
 
-    @Test
-    void requires_three_valid_samples_in_each_condition_and_period() {
-        var before = List.of(row(1L, "EASY", 5, null), row(1L, "EASY", 5, null));
-        var after = List.of(row(1L, "EASY", 3, null), row(1L, "EASY", 3, null), row(1L, "EASY", 3, null));
+    @ParameterizedTest
+    @CsvSource({
+            "5, 2, OTHER_PERIOD_LOW_SAMPLE_SIZE, LOW_SAMPLE_SIZE",
+            "2, 5, LOW_SAMPLE_SIZE, OTHER_PERIOD_LOW_SAMPLE_SIZE",
+            "2, 2, LOW_SAMPLE_SIZE, LOW_SAMPLE_SIZE",
+            "3, 2, OTHER_PERIOD_LOW_SAMPLE_SIZE, LOW_SAMPLE_SIZE",
+            "2, 3, LOW_SAMPLE_SIZE, OTHER_PERIOD_LOW_SAMPLE_SIZE"
+    })
+    void attributes_low_sample_exclusions_to_the_period_that_is_short(
+            int beforeCount, int afterCount, String beforeReason, String afterReason) {
+        List<TrainingDashboardRow> before = new ArrayList<>(), after = new ArrayList<>();
+        for (int i = 0; i < beforeCount; i++) before.add(row(1L, "EASY", 5, null));
+        for (int i = 0; i < afterCount; i++) after.add(row(1L, "EASY", 3, null));
         var matched = aggregator.compare(before, after).metrics().getFirst().matched();
         assertThat(matched.status()).isEqualTo(Status.INSUFFICIENT_DATA);
         assertThat(matched.delta()).isNull();
-        assertThat(matched.baseline().exclusionReasons()).containsEntry("LOW_SAMPLE_SIZE", 2L);
+        assertThat(matched.baseline().value()).isNull();
+        assertThat(matched.current().value()).isNull();
+        assertThat(matched.baseline().sampleCount()).isZero();
+        assertThat(matched.current().sampleCount()).isZero();
+        assertThat(matched.conditions()).isEmpty();
+        assertThat(matched.baseline().exclusionReasons()).isEqualTo(Map.of(beforeReason, (long) beforeCount));
+        assertThat(matched.current().exclusionReasons()).isEqualTo(Map.of(afterReason, (long) afterCount));
+    }
+
+    @Test
+    void preserves_matched_results_while_accounting_for_excluded_condition_pairs() {
+        List<TrainingDashboardRow> before = new ArrayList<>(), after = new ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            before.add(row(1L, "EASY", 4, null));
+            after.add(row(1L, "EASY", 2, null));
+        }
+        for (int i = 0; i < 5; i++) before.add(row(2L, "EASY", 8, null));
+        for (int i = 0; i < 2; i++) after.add(row(2L, "EASY", 0, null));
+
+        var matched = aggregator.compare(before, after).metrics().getFirst().matched();
+        assertThat(matched.status()).isEqualTo(Status.READY);
+        assertThat(matched.delta()).isEqualByComparingTo("-2");
+        assertThat(matched.baseline().value()).isEqualByComparingTo("4");
+        assertThat(matched.current().value()).isEqualByComparingTo("2");
+        assertThat(matched.baseline().sampleCount()).isEqualTo(3);
+        assertThat(matched.current().sampleCount()).isEqualTo(3);
+        assertThat(matched.conditionCount()).isEqualTo(1);
+        assertThat(matched.baseline().exclusionReasons()).isEqualTo(Map.of("OTHER_PERIOD_LOW_SAMPLE_SIZE", 5L));
+        assertThat(matched.current().exclusionReasons()).isEqualTo(Map.of("LOW_SAMPLE_SIZE", 2L));
     }
 
     @Test
