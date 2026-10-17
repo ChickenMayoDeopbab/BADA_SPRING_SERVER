@@ -6,8 +6,8 @@ import ChickenMayoDeopbab.bada.global.exception.ApplicationException;
 import ChickenMayoDeopbab.bada.global.exception.statuscode.CommonStatusCode;
 import org.springframework.format.annotation.DateTimeFormat;
 
+import java.time.Clock;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 
 public record TrainingRecordSearchQuery(
@@ -16,10 +16,10 @@ public record TrainingRecordSearchQuery(
         SessionType sessionType, Long scenarioId, String scenarioVersion, String difficulty,
         AiPersonality aiPersonality, Integer scriptLevel
 ) {
-    public TrainingRecordFilter validatedFilter() {
+    public TrainingRecordFilter validatedFilter(Clock clock) {
         boolean validPeriod = (from == null && to == null) || (from != null && to != null
                 && !from.isBefore(LocalDate.of(2000, 1, 1)) && !to.isBefore(from)
-                && !to.isAfter(LocalDate.now(ZoneId.of("Asia/Seoul"))) && ChronoUnit.DAYS.between(from, to) < 366);
+                && !to.isAfter(LocalDate.now(clock)) && ChronoUnit.DAYS.between(from, to) < 366);
         if (!validPeriod || (scenarioId != null && scenarioId <= 0)
                 || (scriptLevel != null && (scriptLevel < 1 || scriptLevel > 3))
                 || invalidText(scenarioVersion) || invalidText(difficulty)) {

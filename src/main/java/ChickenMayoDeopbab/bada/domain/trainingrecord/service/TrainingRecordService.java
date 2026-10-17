@@ -37,6 +37,7 @@ import ChickenMayoDeopbab.bada.domain.trainingrecord.model.TrainingDataRemoved;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Comparator;
@@ -62,6 +63,7 @@ public class TrainingRecordService {
     private final SensitiveInformationConsentPolicy sensitiveInformationConsentPolicy;
     private final RecordingPlaybackService recordingPlaybackService;
     private final ApplicationEventPublisher events;
+    private final Clock dashboardClock;
     private static final String OTHER_CATEGORY = "other";
     private static final Map<String, String> CATEGORY_ICON_KEYS = Map.of(
             "work", "scenario_profile/9c59b8ee-46d0-4207-bed0-ab7136104fef",
@@ -91,7 +93,7 @@ public class TrainingRecordService {
         if (query == null || !query.hasFilters()) {
             records = trainingRecordRepository.findByUserOrderByStartedAtDesc(user, pageable);
         } else {
-            var filter = query.validatedFilter();
+            var filter = query.validatedFilter(dashboardClock);
             records = trainingRecordRepository.findFilteredTrainingRecords(user,
                     query.from() == null ? null : query.from().atStartOfDay(),
                     query.to() == null ? null : query.to().plusDays(1).atStartOfDay(), filter, pageable);

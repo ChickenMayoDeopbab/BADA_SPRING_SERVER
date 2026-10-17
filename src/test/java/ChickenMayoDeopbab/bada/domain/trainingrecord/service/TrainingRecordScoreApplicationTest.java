@@ -28,7 +28,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -72,7 +75,8 @@ class TrainingRecordScoreApplicationTest {
                     new CallAnxietyScoreCalculator(),
                     sensitiveInformationConsentPolicy,
                     mock(RecordingPlaybackService.class),
-                    mock(org.springframework.context.ApplicationEventPublisher.class)
+                    mock(org.springframework.context.ApplicationEventPublisher.class),
+                    Clock.fixed(Instant.parse("2026-10-17T00:00:00Z"), ZoneId.of("Asia/Seoul"))
             );
 
     private final Users user = mock(Users.class);

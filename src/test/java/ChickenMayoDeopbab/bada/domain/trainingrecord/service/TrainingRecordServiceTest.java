@@ -29,9 +29,12 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -51,6 +54,9 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class TrainingRecordServiceTest {
+
+    private static final Clock FIXED_CLOCK =
+            Clock.fixed(Instant.parse("2026-10-17T00:00:00Z"), ZoneId.of("Asia/Seoul"));
 
     private final TrainingRecordRepository trainingRecordRepository = mock(TrainingRecordRepository.class);
     private final UsersRepository usersRepository = mock(UsersRepository.class);
@@ -72,7 +78,8 @@ class TrainingRecordServiceTest {
             new CallAnxietyScoreCalculator(),
             sensitiveInformationConsentPolicy,
             recordingPlaybackService,
-            mock(org.springframework.context.ApplicationEventPublisher.class)
+            mock(org.springframework.context.ApplicationEventPublisher.class),
+            FIXED_CLOCK
     );
 
     private final Users user = mock(Users.class);
@@ -88,7 +95,7 @@ class TrainingRecordServiceTest {
                 .thenReturn(Page.empty(pageable));
         assertThat(service.getTrainingRecords(pageable, query)).isEmpty();
         verify(trainingRecordRepository).findFilteredTrainingRecords(user,
-                LocalDateTime.of(2026, 10, 1, 0, 0), LocalDateTime.of(2026, 10, 3, 0, 0), query.validatedFilter(), pageable);
+                LocalDateTime.of(2026, 10, 1, 0, 0), LocalDateTime.of(2026, 10, 3, 0, 0), query.validatedFilter(FIXED_CLOCK), pageable);
         verify(trainingRecordRepository, never()).findByUserOrderByStartedAtDesc(any(), any());
     }
 
