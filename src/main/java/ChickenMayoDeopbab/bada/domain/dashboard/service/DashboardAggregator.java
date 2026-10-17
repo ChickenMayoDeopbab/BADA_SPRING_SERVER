@@ -187,9 +187,13 @@ public class DashboardAggregator {
             boolean common = !before.isEmpty() && !after.isEmpty();
             shared |= common;
             if (before.size() < MIN_COMPARISON_SAMPLES || after.size() < MIN_COMPARISON_SAMPLES) {
-                String reason = common ? "LOW_SAMPLE_SIZE" : "NO_SHARED_CONDITION";
-                if (!before.isEmpty()) beforeExclusions.merge(reason, (long) before.size(), Long::sum);
-                if (!after.isEmpty()) afterExclusions.merge(reason, (long) after.size(), Long::sum);
+                // 상대 기간 때문에 제외된 표본도 집계하되, 어느 기간의 표본이 부족한지 구분한다.
+                String beforeReason = !common ? "NO_SHARED_CONDITION"
+                        : before.size() < MIN_COMPARISON_SAMPLES ? "LOW_SAMPLE_SIZE" : "OTHER_PERIOD_LOW_SAMPLE_SIZE";
+                String afterReason = !common ? "NO_SHARED_CONDITION"
+                        : after.size() < MIN_COMPARISON_SAMPLES ? "LOW_SAMPLE_SIZE" : "OTHER_PERIOD_LOW_SAMPLE_SIZE";
+                if (!before.isEmpty()) beforeExclusions.merge(beforeReason, (long) before.size(), Long::sum);
+                if (!after.isEmpty()) afterExclusions.merge(afterReason, (long) after.size(), Long::sum);
                 continue;
             }
             long weight = Math.min(before.size(), after.size());
