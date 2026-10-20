@@ -1,7 +1,13 @@
 package ChickenMayoDeopbab.bada.domain.session.model;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
-// FastAPI가 전달하는 잘한 발화 구간(초 단위)
-public record GoodSegment(Double start, Double end, @JsonProperty("good_point") String goodPoint) {
+@JsonIgnoreProperties(ignoreUnknown = true)
+public record GoodSegment(
+        Double start,
+        Double end,
+        String title,
+        @JsonAlias("good_point") String content
+) {
 }
