@@ -6,9 +6,9 @@ import ChickenMayoDeopbab.bada.domain.file.service.FileService;
 import ChickenMayoDeopbab.bada.domain.legalconsent.service.SensitiveInformationConsentPolicy;
 import ChickenMayoDeopbab.bada.domain.session.enums.EndReason;
 import ChickenMayoDeopbab.bada.domain.session.enums.SessionType;
-import ChickenMayoDeopbab.bada.domain.session.model.GoodSegment;
 import ChickenMayoDeopbab.bada.domain.session.model.TranscriptTurn;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.FeedbackResponse;
+import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.GoodSegmentResponse;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.request.TrainingRecordSearchQuery;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.dto.response.TrainingRecordResponse;
 import ChickenMayoDeopbab.bada.domain.trainingrecord.entity.TrainingRecord;
@@ -516,7 +516,8 @@ class TrainingRecordServiceTest {
         assertThat(response.trainingTime()).isEqualTo(LocalTime.of(0, 1, 30));
         assertThat(response.recordingUrl()).isEqualTo(PLAYBACK_URL);
         assertThat(response.goodSegments())
-                .containsExactly(new GoodSegment(1.5, 3.0, null, "인사를 또렷하게 했어요"));
+                .containsExactly(new GoodSegmentResponse(
+                        1.5, 3.0, null, "인사를 또렷하게 했어요", "인사를 또렷하게 했어요"));
         assertThat(response.transcript()).containsExactly(
                 new TranscriptTurn("user", "여보세요"),
                 new TranscriptTurn("assistant", "네, 안녕하세요")
@@ -537,8 +538,9 @@ class TrainingRecordServiceTest {
 
         FeedbackResponse response = service.getFeedback(10L);
 
-        assertThat(response.goodSegments()).containsExactly(new GoodSegment(
+        assertThat(response.goodSegments()).containsExactly(new GoodSegmentResponse(
                 1.5, 3.0, "인사가 또렷했어요",
+                "첫마디를 분명하게 해서 상대가 바로 알아들었어요.",
                 "첫마디를 분명하게 해서 상대가 바로 알아들었어요."));
     }
 

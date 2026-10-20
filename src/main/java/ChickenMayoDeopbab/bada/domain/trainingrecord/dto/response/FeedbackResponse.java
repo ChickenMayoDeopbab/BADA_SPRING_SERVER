@@ -15,7 +15,7 @@ public record FeedbackResponse(
         String scenarioName,
         @JsonFormat(pattern = "HH:mm:ss")
         LocalTime trainingTime,
-        List<GoodSegment> goodSegments,
+        List<GoodSegmentResponse> goodSegments,
         String recordingUrl,
         List<TranscriptTurn> transcript
 ) {
@@ -25,7 +25,7 @@ public record FeedbackResponse(
                 trainingRecord.getScenarioName(),
                 LocalTime.ofSecondOfDay
                         (Duration.between(trainingRecord.getStartedAt(), trainingRecord.getEndedAt()).getSeconds()),
-                goodSegments,
+                goodSegments.stream().map(GoodSegmentResponse::from).toList(),
                 recordingUrl,
                 transcript
         );
