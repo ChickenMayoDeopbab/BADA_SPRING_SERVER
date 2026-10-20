@@ -516,11 +516,30 @@ class TrainingRecordServiceTest {
         assertThat(response.trainingTime()).isEqualTo(LocalTime.of(0, 1, 30));
         assertThat(response.recordingUrl()).isEqualTo(PLAYBACK_URL);
         assertThat(response.goodSegments())
-                .containsExactly(new GoodSegment(1.5, 3.0, "인사를 또렷하게 했어요"));
+                .containsExactly(new GoodSegment(1.5, 3.0, null, "인사를 또렷하게 했어요"));
         assertThat(response.transcript()).containsExactly(
                 new TranscriptTurn("user", "여보세요"),
                 new TranscriptTurn("assistant", "네, 안녕하세요")
         );
+    }
+
+    @Test
+    void feedbackReturnsSegmentTitleAndContent() {
+        String segments = """
+                [
+                  {"start":1.5,"end":3.0,"type":"GOOD","title":"인사가 또렷했어요",
+                   "content":"첫마디를 분명하게 해서 상대가 바로 알아들었어요."}
+                ]
+                """;
+        TrainingRecord found = feedbackRecord(TRANSCRIPT_JSON, segments, "recordings/sess-1.wav");
+        loginForFeedback(found);
+        when(recordingPlaybackService.playbackUrl(found)).thenReturn(PLAYBACK_URL);
+
+        FeedbackResponse response = service.getFeedback(10L);
+
+        assertThat(response.goodSegments()).containsExactly(new GoodSegment(
+                1.5, 3.0, "인사가 또렷했어요",
+                "첫마디를 분명하게 해서 상대가 바로 알아들었어요."));
     }
 
     @Test
