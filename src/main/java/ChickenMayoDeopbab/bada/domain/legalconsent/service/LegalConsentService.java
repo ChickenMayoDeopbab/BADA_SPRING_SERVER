@@ -2,6 +2,7 @@ package ChickenMayoDeopbab.bada.domain.legalconsent.service;
 
 import ChickenMayoDeopbab.bada.domain.legalconsent.dto.request.AcceptLegalConsentRequest;
 import ChickenMayoDeopbab.bada.domain.legalconsent.dto.response.LegalConsentStatusResponse;
+import ChickenMayoDeopbab.bada.domain.legalconsent.port.BiosignalDataCleanupPort;
 import ChickenMayoDeopbab.bada.domain.file.service.FileService;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
 import ChickenMayoDeopbab.bada.domain.user.exception.UsersStatusCode;
@@ -22,6 +23,7 @@ public class LegalConsentService {
 
     private final UsersRepository usersRepository;
     private final FileService fileService;
+    private final BiosignalDataCleanupPort biosignalDataCleanupPort;
 
     public LegalConsentStatusResponse getStatus() {
         return LegalConsentStatusResponse.from(getCurrentUser());
@@ -58,6 +60,9 @@ public class LegalConsentService {
     @Transactional
     public LegalConsentStatusResponse withdrawBiosignal() {
         Users user = getCurrentUser();
+        if (user.isBiosignalAgreed()) {
+            biosignalDataCleanupPort.deleteByUserId(user.getUserId());
+        }
         user.withdrawBiosignal(Instant.now());
         return LegalConsentStatusResponse.from(user);
     }
