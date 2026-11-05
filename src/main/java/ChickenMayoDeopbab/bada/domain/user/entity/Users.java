@@ -85,6 +85,12 @@ public class Users {
 
     private Instant profileImageWithdrawnAt;
 
+    @Column(name = "biosignal_agreed_at")
+    private Instant biosignalAgreedAt;
+
+    @Column(name = "biosignal_withdrawn_at")
+    private Instant biosignalWithdrawnAt;
+
 
     @PrePersist
     public void prePersist() {
@@ -172,6 +178,25 @@ public class Users {
 
     public boolean isProfileImageAgreed() {
         return profileImageAgreedAt != null && profileImageWithdrawnAt == null;
+    }
+
+    public void agreeBiosignal(Instant agreedAt) {
+        if (biosignalAgreedAt != null && biosignalWithdrawnAt == null) {
+            return;
+        }
+        biosignalAgreedAt = agreedAt;
+        biosignalWithdrawnAt = null;
+    }
+
+    public void withdrawBiosignal(Instant withdrawnAt) {
+        if (!isBiosignalAgreed()) {
+            return;
+        }
+        biosignalWithdrawnAt = withdrawnAt;
+    }
+
+    public boolean isBiosignalAgreed() {
+        return biosignalAgreedAt != null && biosignalWithdrawnAt == null;
     }
 
     public void clearProfileImage() {

@@ -36,6 +36,15 @@ public record LegalConsentStatusResponse(
         @Schema(description = "프로필 이미지 처리 최근 철회 시각")
         Instant profileImageWithdrawnAt,
 
+        @Schema(description = "현재 생체신호 처리 동의 여부")
+        boolean biosignalAgreed,
+
+        @Schema(description = "생체신호 처리 최근 동의 시각")
+        Instant biosignalAgreedAt,
+
+        @Schema(description = "생체신호 처리 최근 철회 시각")
+        Instant biosignalWithdrawnAt,
+
         @Schema(description = "필수 약관 화면 표시 필요 여부")
         boolean legalActionRequired
 ) {
@@ -54,6 +63,9 @@ public record LegalConsentStatusResponse(
                 user.isProfileImageAgreed(),
                 user.getProfileImageAgreedAt(),
                 user.getProfileImageWithdrawnAt(),
+                user.isBiosignalAgreed(),
+                user.getBiosignalAgreedAt(),
+                user.getBiosignalWithdrawnAt(),
                 !termsOfServiceAgreed || !privacyPolicyAcknowledged
         );
     }
