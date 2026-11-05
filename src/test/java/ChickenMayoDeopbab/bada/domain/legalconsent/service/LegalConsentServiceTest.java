@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.time.Instant;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -55,13 +56,14 @@ class LegalConsentServiceTest {
         assertThat(response.privacyPolicyAcknowledged()).isFalse();
         assertThat(response.sensitiveInformationAgreed()).isFalse();
         assertThat(response.profileImageAgreed()).isFalse();
+        assertThat(response.biosignalAgreed()).isFalse();
         assertThat(response.legalActionRequired()).isTrue();
     }
 
     @Test
     void acceptStoresRequiredConsentWithoutForcingSensitiveConsent() {
         LegalConsentStatusResponse response = legalConsentService.accept(
-                new AcceptLegalConsentRequest(true, true, false, false)
+                new AcceptLegalConsentRequest(true, true, false, false, false)
         );
 
         assertThat(response.termsOfServiceAgreed()).isTrue();
@@ -71,13 +73,15 @@ class LegalConsentServiceTest {
         assertThat(response.sensitiveInformationAgreed()).isFalse();
         assertThat(response.sensitiveInformationAgreedAt()).isNull();
         assertThat(response.profileImageAgreed()).isFalse();
+        assertThat(response.biosignalAgreed()).isFalse();
+        assertThat(response.biosignalAgreedAt()).isNull();
         verify(fileService).deleteProfileFilesByUserId(7L);
         assertThat(response.legalActionRequired()).isFalse();
     }
 
     @Test
     void withdrawSensitiveConsentKeepsRequiredConsent() {
-        legalConsentService.accept(new AcceptLegalConsentRequest(true, true, true, false));
+        legalConsentService.accept(new AcceptLegalConsentRequest(true, true, true, false, false));
 
         LegalConsentStatusResponse response = legalConsentService.withdrawSensitiveInformation();
 
@@ -92,7 +96,7 @@ class LegalConsentServiceTest {
     @Test
     void profileImageConsentCanBeAcceptedAndWithdrawnWithDataDeletion() {
         LegalConsentStatusResponse accepted = legalConsentService.accept(
-                new AcceptLegalConsentRequest(true, true, false, true)
+                new AcceptLegalConsentRequest(true, true, false, true, false)
         );
 
         assertThat(accepted.profileImageAgreed()).isTrue();
@@ -103,5 +107,54 @@ class LegalConsentServiceTest {
         assertThat(withdrawn.profileImageAgreed()).isFalse();
         assertThat(withdrawn.profileImageWithdrawnAt()).isNotNull();
         verify(fileService).deleteProfileFilesByUserId(7L);
+    }
+
+    @Test
+    void acceptStoresBiosignalConsentIndependentlyOfSensitiveConsent() {
+        LegalConsentStatusResponse response = legalConsentService.accept(
+                new AcceptLegalConsentRequest(true, true, false, false, true)
+        );
+
+        assertThat(response.biosignalAgreed()).isTrue();
+        assertThat(response.biosignalAgreedAt()).isNotNull();
+        assertThat(response.biosignalWithdrawnAt()).isNull();
+        assertThat(response.sensitiveInformationAgreed()).isFalse();
+    }
+
+    @Test
+    void acceptWithoutBiosignalChoiceKeepsExistingBiosignalConsent() {
+        legalConsentService.accept(new AcceptLegalConsentRequest(true, true, false, false, true));
+        Instant agreedAt = user.getBiosignalAgreedAt();
+
+        LegalConsentStatusResponse omitted = legalConsentService.accept(
+                new AcceptLegalConsentRequest(true, true, false, false, null)
+        );
+        LegalConsentStatusResponse declined = legalConsentService.accept(
+                new AcceptLegalConsentRequest(true, true, false, false, false)
+        );
+
+        assertThat(omitted.biosignalAgreed()).isTrue();
+        assertThat(declined.biosignalAgreed()).isTrue();
+        assertThat(declined.biosignalAgreedAt()).isEqualTo(agreedAt);
+    }
+
+    @Test
+    void withdrawBiosignalConsentKeepsOtherConsentsAndCanBeAgreedAgain() {
+        legalConsentService.accept(new AcceptLegalConsentRequest(true, true, true, false, true));
+
+        LegalConsentStatusResponse withdrawn = legalConsentService.withdrawBiosignal();
+
+        assertThat(withdrawn.biosignalAgreed()).isFalse();
+        assertThat(withdrawn.biosignalAgreedAt()).isNotNull();
+        assertThat(withdrawn.biosignalWithdrawnAt()).isNotNull();
+        assertThat(withdrawn.sensitiveInformationAgreed()).isTrue();
+        assertThat(withdrawn.legalActionRequired()).isFalse();
+
+        LegalConsentStatusResponse agreedAgain = legalConsentService.accept(
+                new AcceptLegalConsentRequest(true, true, true, false, true)
+        );
+
+        assertThat(agreedAgain.biosignalAgreed()).isTrue();
+        assertThat(agreedAgain.biosignalWithdrawnAt()).isNull();
     }
 }
