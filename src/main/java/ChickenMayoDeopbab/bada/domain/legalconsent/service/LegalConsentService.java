@@ -36,6 +36,9 @@ public class LegalConsentService {
         if (Boolean.TRUE.equals(request.sensitiveInformationAgreed())) {
             user.agreeSensitiveInformation(acceptedAt);
         }
+        if (Boolean.TRUE.equals(request.biosignalAgreed())) {
+            user.agreeBiosignal(acceptedAt);
+        }
         if (Boolean.TRUE.equals(request.profileImageAgreed())) {
             user.agreeProfileImage(acceptedAt);
         } else {
@@ -49,6 +52,13 @@ public class LegalConsentService {
     public LegalConsentStatusResponse withdrawSensitiveInformation() {
         Users user = getCurrentUser();
         user.withdrawSensitiveInformation(Instant.now());
+        return LegalConsentStatusResponse.from(user);
+    }
+
+    @Transactional
+    public LegalConsentStatusResponse withdrawBiosignal() {
+        Users user = getCurrentUser();
+        user.withdrawBiosignal(Instant.now());
         return LegalConsentStatusResponse.from(user);
     }
 
