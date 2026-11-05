@@ -12,7 +12,7 @@ class AcceptLegalConsentRequestTest {
 
     @Test
     void requiredLegalConsentMustBeTrue() {
-        AcceptLegalConsentRequest request = new AcceptLegalConsentRequest(false, false, true, false);
+        AcceptLegalConsentRequest request = new AcceptLegalConsentRequest(false, false, true, false, false);
 
         assertThat(validator.validate(request))
                 .extracting(violation -> violation.getPropertyPath().toString())
@@ -21,7 +21,7 @@ class AcceptLegalConsentRequestTest {
 
     @Test
     void sensitiveConsentChoiceMustBeExplicit() {
-        AcceptLegalConsentRequest request = new AcceptLegalConsentRequest(true, true, null, false);
+        AcceptLegalConsentRequest request = new AcceptLegalConsentRequest(true, true, null, false, false);
 
         assertThat(validator.validate(request))
                 .extracting(violation -> violation.getPropertyPath().toString())
@@ -30,17 +30,24 @@ class AcceptLegalConsentRequestTest {
 
     @Test
     void sensitiveConsentMayBeDeclined() {
-        AcceptLegalConsentRequest request = new AcceptLegalConsentRequest(true, true, false, false);
+        AcceptLegalConsentRequest request = new AcceptLegalConsentRequest(true, true, false, false, false);
 
         assertThat(validator.validate(request)).isEmpty();
     }
 
     @Test
     void profileImageConsentChoiceMustBeExplicit() {
-        AcceptLegalConsentRequest request = new AcceptLegalConsentRequest(true, true, false, null);
+        AcceptLegalConsentRequest request = new AcceptLegalConsentRequest(true, true, false, null, false);
 
         assertThat(validator.validate(request))
                 .extracting(violation -> violation.getPropertyPath().toString())
                 .containsExactly("profileImageAgreed");
+    }
+
+    @Test
+    void biosignalConsentMayBeOmittedByOldApp() {
+        AcceptLegalConsentRequest request = new AcceptLegalConsentRequest(true, true, false, false, null);
+
+        assertThat(validator.validate(request)).isEmpty();
     }
 }
