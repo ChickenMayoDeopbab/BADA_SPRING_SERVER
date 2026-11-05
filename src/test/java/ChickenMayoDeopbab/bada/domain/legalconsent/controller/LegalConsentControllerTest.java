@@ -1,6 +1,7 @@
 package ChickenMayoDeopbab.bada.domain.legalconsent.controller;
 
 import ChickenMayoDeopbab.bada.domain.file.service.FileService;
+import ChickenMayoDeopbab.bada.domain.legalconsent.port.BiosignalDataCleanupPort;
 import ChickenMayoDeopbab.bada.domain.legalconsent.service.LegalConsentService;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
 import ChickenMayoDeopbab.bada.domain.user.repository.UsersRepository;
@@ -27,7 +28,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-// 생체신호 동의 전에 배포된 앱은 accept 요청에 biosignalAgreed 를 보내지 않는다.
 class LegalConsentControllerTest {
     private static final String OLD_APP_ACCEPT = """
             {"termsOfServiceAgreed":true,"privacyPolicyAcknowledged":true,
@@ -41,7 +41,8 @@ class LegalConsentControllerTest {
     private final UsersRepository usersRepository = mock(UsersRepository.class);
     private final Users user = Users.builder().userId(7L).username("legal-consent-user").build();
     private final MockMvc mvc = MockMvcBuilders.standaloneSetup(
-            new LegalConsentController(new LegalConsentService(usersRepository, mock(FileService.class))))
+            new LegalConsentController(new LegalConsentService(
+                    usersRepository, mock(FileService.class), mock(BiosignalDataCleanupPort.class))))
             .setControllerAdvice(new GlobalExceptionHandler()).build();
 
     @BeforeEach
