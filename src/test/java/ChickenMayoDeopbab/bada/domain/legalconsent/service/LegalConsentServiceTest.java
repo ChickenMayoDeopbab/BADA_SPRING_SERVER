@@ -2,6 +2,7 @@ package ChickenMayoDeopbab.bada.domain.legalconsent.service;
 
 import ChickenMayoDeopbab.bada.domain.legalconsent.dto.request.AcceptLegalConsentRequest;
 import ChickenMayoDeopbab.bada.domain.legalconsent.dto.response.LegalConsentStatusResponse;
+import ChickenMayoDeopbab.bada.domain.legalconsent.port.BiosignalDataCleanupPort;
 import ChickenMayoDeopbab.bada.domain.file.service.FileService;
 import ChickenMayoDeopbab.bada.domain.user.entity.Users;
 import ChickenMayoDeopbab.bada.domain.user.repository.UsersRepository;
@@ -15,8 +16,12 @@ import java.time.Instant;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class LegalConsentServiceTest {
@@ -24,6 +29,7 @@ class LegalConsentServiceTest {
     private Users user;
     private LegalConsentService legalConsentService;
     private FileService fileService;
+    private BiosignalDataCleanupPort biosignalDataCleanupPort;
 
     @BeforeEach
     void setUp() {
@@ -33,6 +39,7 @@ class LegalConsentServiceTest {
                 .username("legal-consent-user")
                 .build();
         fileService = mock(FileService.class);
+        biosignalDataCleanupPort = mock(BiosignalDataCleanupPort.class);
 
         when(usersRepository.findByUsername("legal-consent-user"))
                 .thenReturn(Optional.of(user));
@@ -40,7 +47,7 @@ class LegalConsentServiceTest {
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken("legal-consent-user", null)
         );
-        legalConsentService = new LegalConsentService(usersRepository, fileService);
+        legalConsentService = new LegalConsentService(usersRepository, fileService, biosignalDataCleanupPort);
     }
 
     @AfterEach
@@ -156,5 +163,41 @@ class LegalConsentServiceTest {
 
         assertThat(agreedAgain.biosignalAgreed()).isTrue();
         assertThat(agreedAgain.biosignalWithdrawnAt()).isNull();
+    }
+
+    @Test
+    void withdrawBiosignalPurgesFastApiDataBeforeRecordingWithdrawal() {
+        legalConsentService.accept(new AcceptLegalConsentRequest(true, true, false, false, true));
+        doAnswer(invocation -> {
+            assertThat(user.isBiosignalAgreed()).isTrue();
+            return null;
+        }).when(biosignalDataCleanupPort).deleteByUserId(7L);
+
+        LegalConsentStatusResponse withdrawn = legalConsentService.withdrawBiosignal();
+
+        verify(biosignalDataCleanupPort).deleteByUserId(7L);
+        assertThat(withdrawn.biosignalAgreed()).isFalse();
+        assertThat(withdrawn.biosignalWithdrawnAt()).isNotNull();
+    }
+
+    @Test
+    void withdrawBiosignalWithoutConsentDoesNotCallFastApi() {
+        LegalConsentStatusResponse response = legalConsentService.withdrawBiosignal();
+
+        verifyNoInteractions(biosignalDataCleanupPort);
+        assertThat(response.biosignalAgreed()).isFalse();
+        assertThat(response.biosignalWithdrawnAt()).isNull();
+    }
+
+    @Test
+    void withdrawBiosignalKeepsConsentWhenPurgeFails() {
+        legalConsentService.accept(new AcceptLegalConsentRequest(true, true, false, false, true));
+        doThrow(new IllegalStateException("fastapi down")).when(biosignalDataCleanupPort).deleteByUserId(7L);
+
+        assertThatThrownBy(() -> legalConsentService.withdrawBiosignal())
+                .isInstanceOf(IllegalStateException.class);
+
+        assertThat(user.isBiosignalAgreed()).isTrue();
+        assertThat(user.getBiosignalWithdrawnAt()).isNull();
     }
 }
