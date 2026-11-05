@@ -19,6 +19,10 @@ public record AcceptLegalConsentRequest(
 
         @Schema(description = "프로필 이미지 처리 선택 동의 여부", example = "false")
         @NotNull(message = "프로필 이미지 처리 동의 여부를 선택해야 합니다.")
-        Boolean profileImageAgreed
+        Boolean profileImageAgreed,
+
+        @Schema(description = "생체신호 처리 선택 동의 여부(보내지 않으면 기존 상태 유지, 철회는 DELETE /biosignal)",
+                example = "false")
+        Boolean biosignalAgreed
 ) {
 }
