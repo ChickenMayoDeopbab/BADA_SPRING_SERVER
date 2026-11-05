@@ -49,6 +49,15 @@ public class LegalConsentController {
         );
     }
 
+    @Operation(summary = "생체신호 처리 동의 철회")
+    @DeleteMapping("/biosignal")
+    public ApiResponse<LegalConsentStatusResponse> withdrawBiosignal() {
+        return ApiResponse.ok(
+                legalConsentService.withdrawBiosignal(),
+                "생체신호 처리 동의가 철회되었습니다."
+        );
+    }
+
     @Operation(summary = "프로필 이미지 처리 동의 철회")
     @DeleteMapping("/profile-image")
     public ApiResponse<LegalConsentStatusResponse> withdrawProfileImage() {
