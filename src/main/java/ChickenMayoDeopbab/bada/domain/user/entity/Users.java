@@ -85,7 +85,6 @@ public class Users {
 
     private Instant profileImageWithdrawnAt;
 
-    // FastAPI 가 생체신호 업로드 때 이 칸 이름으로 동의를 확인한다.
     @Column(name = "biosignal_agreed_at")
     private Instant biosignalAgreedAt;
 
